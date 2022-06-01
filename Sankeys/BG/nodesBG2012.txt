@@ -1,0 +1,51 @@
+,label,position,value,x,y
+Africa,Africa (0),1. imp region,0.4754863957828877,0.09,0.6531960152645568
+Asia,Asia (8),1. imp region,8.504486328976434,0.09,0.7428226871504207
+BG,BG (50),1. imp region,50.68328421740232,0.09,0.325254733754579
+Europe,Europe (4),1. imp region,4.834003583068721,0.09,0.8570754359760693
+Middle East,Middle East (1),1. imp region,1.2707040823842113,0.09,0.9304565602295173
+North America,North America (0),1. imp region,0.27075258816972275,0.09,0.978054840165237
+Oceania,Oceania (0),1. imp region,0.05611701137407627,0.09,1.0187905764019174
+South America,South America (0),1. imp region,0.27562135621398565,0.09,1.0595538216861264
+Imports,Imports (15),2. imp/dom,15.687171345970036,0.2,0.8946991781990233
+Territorial,Territorial (50),2. imp/dom,50.68328421740232,0.2,0.40303251153235675
+Imp - Agriculture-food,Imp - Agriculture-food (1),3. primaire,1.8065283793332658,0.34,0.7829387635942852
+BG - Agriculture-food,BG - Agriculture-food (5),3. primaire,5.837159803510125,0.34,0.13525737337492674
+Imp - Energy industry,Imp - Energy industry (9),3. primaire,9.124047452869254,0.34,0.8696976577028563
+BG - Energy industry,BG - Energy industry (28),3. primaire,28.467165468020323,0.34,0.3540803909755954
+Imp - Heavy industry,Imp - Heavy industry (2),3. primaire,2.549104468963848,0.34,0.9606521842091227
+BG - Heavy industry,BG - Heavy industry (7),3. primaire,7.181844787352769,0.34,0.580501019059132
+Imp - Manufacturing industry,Imp - Manufacturing industry (0),3. primaire,0.8840877917078643,0.34,1.005050078751561
+BG - Manufacturing industry,BG - Manufacturing industry (1),3. primaire,1.546231451810962,0.34,0.6548155606259172
+Imp - Services,Imp - Services (0),3. primaire,0.4068122919245091,0.34,1.0373437989355354
+BG - Services,BG - Services (1),3. primaire,1.75111807255536,0.34,0.6984459295324063
+Imp - Transport services,Imp - Transport services (0),3. primaire,0.916590961171299,0.34,1.0698211654188359
+BG - Transport services,BG - Transport services (1),3. primaire,1.2735835878673103,0.34,0.7405358095555361
+BG - Households,BG - Households (4),3. primaire,4.626181046285499,0.34,0.051138405675106594
+Intermediate cons,Intermediate cons (53),4. cap/ci,53.914367169153294,0.58,0.5318986120718894
+Capital formation,Capital formation (7),4. cap/ci,7.82990734793357,0.58,0.9682602063967828
+Households ,Households  (4),4. cap/ci,4.626181046285499,0.58,0.11363840567510658
+Government,Government (3),5. depenses,3.056220894792224,0.75,0.6659340194405493
+Households,Households (37),5. depenses,37.29039453542074,0.75,0.3796380985687994
+Other,Other (1),5. depenses,1.163979606899516,0.75,0.748111926006069
+Exportations,Exportations (20),5. depenses,20.233679479974388,0.75,0.9273442661258793
+Households direct emissions,Households direct emissions (4),5. depenses,4.6261810462855,0.75,0.08447173900843993
+Nourriture,Nourriture (8),6. exp region,8.650532342708278,1.0,0.396104379078472
+Africa ,Africa  (0),6. exp region,0.6240742860095201,0.88,0.7086030712680661
+Asia ,Asia  (3),6. exp region,3.586995788082615,0.88,0.7542710566315118
+Europe ,Europe  (11),6. exp region,11.14477394551625,0.88,0.8593820929553052
+Middle East ,Middle East  (2),6. exp region,2.8737075216789325,0.88,0.9604629761389566
+North America ,North America  (1),6. exp region,1.2023428599867954,0.88,1.0053680861502579
+Oceania ,Oceania  (0),6. exp region,0.17726635802308974,0.88,1.0350380222006774
+South America ,South America  (0),6. exp region,0.6245187206771847,0.88,1.0614431915653508
+Textiles,Textiles (4),6. exp region,4.286931122713346,1.0,0.599401208800858
+Logement,Logement (17),6. exp region,17.71820482549361,1.0,0.22524326237728254
+Santé,Santé (0),6. exp region,0.7464700440971728,1.0,0.6789843527802628
+Transport,Transport (7),6. exp region,7.201951594803743,1.0,0.06256677806791863
+Divertissements,Divertissements (1),6. exp region,1.7136051192861346,1.0,0.5436225528495854
+Education,Education (0),6. exp region,0.6543155368360769,1.0,0.6491947680694738
+Autres biens et services,Autres biens et services (4),6. exp region,4.000785890560103,1.0,0.4894606473205698
+CO2,CO2 (51),0. ges,51.07187956794931,0.0,0.35856144914801996
+CH4,CH4 (11),0. ges,11.342443041135132,0.0,0.7812088851153468
+N2O,N2O (3),0. ges,3.757448278903933,0.0,0.9365248468177336
+SF6,SF6 (0),0. ges,0.19868467538398593,0.0,1.0288774108504068

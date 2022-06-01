@@ -1,0 +1,51 @@
+,label,position,value,x,y
+Africa,Africa (4),1. imp region,4.447170728506178,0.09,0.8036549956266037
+Asia,Asia (75),1. imp region,75.96169704131273,0.09,0.850478587891587
+CN,CN (3675),1. imp region,3675.7314975552526,0.09,0.40160807561788825
+Europe,Europe (16),1. imp region,16.478185074176032,0.09,0.8984893941143604
+Middle East,Middle East (7),1. imp region,7.613169882540146,0.09,0.9397556048187605
+North America,North America (9),1. imp region,9.467152352501467,0.09,0.9803299706240901
+Oceania,Oceania (6),1. imp region,6.468678961961405,0.09,1.0207913986873114
+South America,South America (4),1. imp region,4.015515678522136,0.09,1.0607148622060483
+Imports,Imports (124),2. imp/dom,124.45156971952011,0.2,0.9710525200623327
+Territorial,Territorial (3675),2. imp/dom,3675.731497555252,0.2,0.479385853395666
+Imp - Agriculture-food,Imp - Agriculture-food (26),3. primaire,26.531978686209435,0.34,0.9280565346968628
+CN - Agriculture-food,CN - Agriculture-food (627),3. primaire,627.4418539005932,0.34,0.28856685777626795
+Imp - Energy industry,Imp - Energy industry (50),3. primaire,50.32965024334267,0.34,0.9606411984718247
+CN - Energy industry,CN - Energy industry (1054),3. primaire,1054.2004868642111,0.34,0.4795104101322958
+Imp - Heavy industry,Imp - Heavy industry (24),3. primaire,24.4450029060079,0.34,0.9930199206108914
+CN - Heavy industry,CN - Heavy industry (813),3. primaire,813.781886795651,0.34,0.6888418956743314
+Imp - Manufacturing industry,Imp - Manufacturing industry (7),3. primaire,7.0338157695318575,0.34,1.021126233331713
+CN - Manufacturing industry,CN - Manufacturing industry (126),3. primaire,126.65352749456828,0.34,0.8066435513092368
+Imp - Services,Imp - Services (4),3. primaire,4.354593532418562,0.34,1.0472500353729908
+CN - Services,CN - Services (73),3. primaire,73.52341262714492,0.34,0.8513969029811802
+Imp - Transport services,Imp - Transport services (11),3. primaire,11.756528582009642,0.34,1.0738398721482076
+CN - Transport services,CN - Transport services (85),3. primaire,85.05427904428241,0.34,0.8920452634217286
+CN - Households,CN - Households (895),3. primaire,895.0760508288,0.34,0.11332561829751728
+Intermediate cons,Intermediate cons (2526),4. cap/ci,2526.6208043945567,0.58,0.600976804567587
+Capital formation,Capital formation (378),4. cap/ci,378.4862120514166,0.58,0.9751511862700697
+Households ,Households  (895),4. cap/ci,895.0760508288,0.58,0.17582561829751728
+Government,Government (315),5. depenses,315.9219730915245,0.75,0.6978597824732111
+Households,Households (1596),5. depenses,1596.246818510328,0.75,0.45083467188691434
+Other,Other (356),5. depenses,356.2433201960753,0.75,0.8225220216830741
+Exportations,Exportations (636),5. depenses,636.694904648045,0.75,0.9788379594659269
+Households direct emissions,Households direct emissions (895),5. depenses,895.0760508288001,0.75,0.14665895163085063
+Nourriture,Nourriture (577),6. exp region,577.9476519699625,1.0,0.44565083337357875
+Africa ,Africa  (3),6. exp region,3.0133917526951985,0.88,0.7512071509615935
+Asia ,Asia  (298),6. exp region,298.1017417967731,0.88,0.8027960287096009
+Europe ,Europe  (80),6. exp region,80.73999902019054,0.88,0.8620549258249156
+Middle East ,Middle East  (9),6. exp region,9.953033731888048,0.88,0.892879465012884
+North America ,North America  (219),6. exp region,219.1111565981646,0.88,0.9373583948376045
+Oceania ,Oceania  (8),6. exp region,8.443662384062405,0.88,0.9816883807179373
+South America ,South America  (17),6. exp region,17.331919364271045,0.88,1.0061069011180104
+Textiles,Textiles (75),6. exp region,75.67538552878787,1.0,0.6479226703934068
+Logement,Logement (1005),6. exp region,1005.9294725738677,1.0,0.26747969942709526
+Santé,Santé (38),6. exp region,38.27948751609757,1.0,0.7252573920745429
+Transport,Transport (630),6. exp region,630.6536842588285,1.0,0.08410756285562543
+Divertissements,Divertissements (85),6. exp region,85.18082438380227,1.0,0.6101744670110026
+Education,Education (113),6. exp region,113.19335101327545,1.0,0.6884351346811641
+Autres biens et services,Autres biens et services (280),6. exp region,280.38498518603075,1.0,0.5522256315768068
+CO2,CO2 (2864),0. ges,2864.727020788291,0.0,0.35268970567410135
+CH4,CH4 (693),0. ges,693.9434134713106,0.0,0.7738573702898911
+N2O,N2O (240),0. ges,240.28285690624338,0.0,0.9360463109776402
+SF6,SF6 (1),0. ges,1.2297761089272117,0.0,1.0298786463618506

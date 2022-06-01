@@ -1,0 +1,10 @@
+country_converter==0.7.4
+dash==2.0.0
+dash_bootstrap_components==1.1.0
+matplotlib==3.5.1
+numpy==1.21.4
+pandas==1.3.5
+plotly==5.5.0
+pymrio==0.4.6
+scipy==1.7.3
+seaborn==0.11.2
