@@ -1859,6 +1859,7 @@ df.loc["World"] = df.sum()
 pop = feather.read_feather("pop.feather")[i]
 pop.loc["World"] = pop.sum()
 df = df.div(pop, axis=0)
+df = df.sort_values(by="pba")
 # df = df.div(df.loc["World"], axis=1)
 
 
@@ -1888,5 +1889,65 @@ for i in df.index[:-1]:
         )
         k += 1
     k += 1
-
 (df.drop("pba", axis=1).T.max() / df.drop("pba", axis=1).T.min()).sort_values()
+# Résultat 1 : ca change par un facteur X
+
+
+# Il faut dire quelque chose de la proportionnalité entre pays
+# Par exemple comparer cbaK hh et cba China US, il y a un facteur 2
+# Ca mais pas satisfaisant :
+
+i = 1995
+df = pd.DataFrame()
+df["pba"] = D_pba + F_hh
+df["cba"] = (
+    SLY.unstack()
+    .loc[["LY CFC", "LY Government", "LY Households", "LY NCF", "LY NPISHS"]]
+    .sum()
+    + F_hh
+)
+df["cbaK"] = (
+    SLY.unstack()
+    .loc[["LkY CFC", "LkY Government", "LkY Households", "LkY NPISHS"]]
+    .sum()
+    + F_hh
+)
+df["cba hh direct"] = SLY.unstack().loc["LY Households"] + F_hh
+df["cbaK hh direct"] = SLY.unstack().loc["LkY Households"] + F_hh
+df["cba hh"] = SLY.unstack().loc["LY Households"]
+df["cbaK hh"] = SLY.unstack().loc["LkY Households"]
+df.loc["World"] = df.sum()
+pop = feather.read_feather("pop.feather")[i]
+pop.loc["World"] = pop.sum()
+df = df.div(pop, axis=0)
+df = df.sort_values(by="cbaK")
+
+df = df.div(df.loc["CN"], axis=1)
+
+
+fig, axes = plt.subplots(1, figsize=(10, 15))
+k = 0
+dictcol = {
+    "pba": "white",
+    "cba": "black",
+    "cbaK": "red",
+    "cba hh direct": "green",
+    "cbaK hh direct": "orange",
+    "cba hh": "gray",
+    "cbaK hh": "pink",
+}
+for i in df.index[:-1]:
+    plt.vlines(x=df.loc[i].loc["pba"], ymin=k, ymax=k + 6, axes=axes)
+    axes.annotate(i, xy=(df.loc[i].loc["pba"], k - 3))
+    for j in df.columns:
+        axes.scatter(df[j].loc[i], k, color=dictcol[j])
+        plt.hlines(
+            y=k,
+            xmin=min(df.loc[i].loc["pba"], df[j].loc[i]),
+            xmax=max(df.loc[i].loc["pba"], df[j].loc[i]),
+            linewidth=0.5,
+            ls="dashed",
+            color=dictcol[j],
+        )
+        k += 1
+    k += 1
