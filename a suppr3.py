@@ -1138,9 +1138,6 @@ def data_Sankey(year, region):
             np.nan,
         )
     )
-    # data.loc[
-    #     [i for i in data.index if i[4] == "LY NCF" and i[5] != region], ["7. cons"]
-    # ] = "RoW - Net capital formation "
     data["8. exp"] = data.index.get_level_values(level="region cons")
     data = data.replace({region: np.nan})
     data["1. imp reg"] = data.index.get_level_values(level="region prod") + " "
@@ -1429,7 +1426,7 @@ def node_y(nodes, node, white, color, region):
             )
         )
     elif pos == "2. imp dom":
-        df = df.reindex(["Territorial", "Imports"])
+        df = df.sort_values(ascending=False)
     elif pos == "3. pba":
         df = df.reindex(
             pd.Index(["Households direct emissions"])

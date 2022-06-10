@@ -808,6 +808,7 @@ def fig_sankey(year, region):
             "RoW - Education",
             "RoW - Health",
             "RoW - Other goods and services",
+            "RoW - Net capital formation "
         ]
     ] = 0.76
 
@@ -1138,9 +1139,9 @@ def data_Sankey(year, region):
             np.nan,
         )
     )
-    # data.loc[
-    #     [i for i in data.index if i[4] == "LY NCF" and i[5] != region], ["7. cons"]
-    # ] = "RoW - Net capital formation "
+    data.loc[
+        [i for i in data.index if i[4] == "LY NCF" and i[5] != region], ["7. cons"]
+    ] = "RoW - Net capital formation "
     data["8. exp"] = data.index.get_level_values(level="region cons")
     data = data.replace({region: np.nan})
     data["1. imp reg"] = data.index.get_level_values(level="region prod") + " "
@@ -1387,6 +1388,7 @@ def node_y(nodes, node, white, color, region):
                     "RoW - Education",
                     "RoW - Health",
                     "RoW - Other goods and services",
+                    'RoW - Net capital formation ',
                 ]
             ]
         )
@@ -1456,7 +1458,7 @@ def node_y(nodes, node, white, color, region):
                 "RoW - Government",
                 "RoW - NPISHS",
                 "RoW - Net capital formation",
-                # "RoW - Consumption of fixed capital",
+                "RoW - Consumption of fixed capital ",
             ]
         )
     elif pos == "6. cbaK":
@@ -1475,6 +1477,7 @@ def node_y(nodes, node, white, color, region):
                 "RoW - Education",
                 "RoW - Health",
                 "RoW - Other goods and services",
+                'RoW - Net capital formation '
             ]
         )
 
@@ -1495,6 +1498,7 @@ def node_y(nodes, node, white, color, region):
                 "RoW - Education",
                 "RoW - Health",
                 "RoW - Other goods and services",
+                'RoW - Net capital formation '
             ]
         )
     elif pos == "8. exp":
