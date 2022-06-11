@@ -360,101 +360,6 @@ def rename_region(df, level="LOCATION"):
 
 
 def Kbar():
-    """Calculates Kbar for years 2016-2019 from Kbar2015, Kbar2014, CFC2017 and GFCF2017.
-
-    Parameters
-    ----------
-    None
-
-    Returns
-    -------
-    None
-    """
-
-    CFC_WB = pd.read_excel("World Bank/CFC worldbank.xlsx", header=3, index_col=[0])[
-        [str(i) for i in range(2015, 2020, 1)]
-    ]
-
-    GFCF_WB = pd.read_excel("World Bank/GFCF worldbank.xlsx", header=3, index_col=[0])[
-        [str(i) for i in range(2015, 2020, 1)]
-    ]
-
-    # we want to set to NaN values for regions that don't have both CFC and GFCF data
-    CFC_WB = (
-        CFC_WB * GFCF_WB / GFCF_WB
-    )  # in case some countries have data for CFC but not GFCF
-    GFCF_WB = GFCF_WB * CFC_WB / CFC_WB
-
-    CFC_WB = rename_region(CFC_WB, "Country Name").drop("Z - Aggregated categories")
-    # rename the regions to a common format
-    CFC_WB["region"] = cc.convert(names=CFC_WB.index, to="EXIO3")
-    # convert the common format to EXIOBASE format
-    CFC_WB = (
-        CFC_WB.reset_index()
-        .set_index("region")
-        .drop("Country Name", axis=1)
-        .groupby(level="region")
-        .sum()
-    )
-    # define EXIOBASE regions as index
-
-    GFCF_WB = rename_region(GFCF_WB, "Country Name").drop("Z - Aggregated categories")
-    GFCF_WB["region"] = cc.convert(names=GFCF_WB.index, to="EXIO3")
-    GFCF_WB = (
-        GFCF_WB.reset_index()
-        .set_index("region")
-        .drop("Country Name", axis=1)
-        .groupby(level="region")
-        .sum()
-    )
-
-    GFCF_over_CFC_WB = GFCF_WB / CFC_WB
-    GFCF_over_CFC_WB.loc["TW"] = GFCF_over_CFC_WB.loc["CN"]
-    # hypothesis: ratio of GFCF/CFC is same for Taiwan than for China
-
-    Kbar15 = feather.read_feather(
-        "C:/Users/andrieba/Documents/Data/Kbar/Kbar_2015pxp.feather"
-    )
-
-    # We calculate coefficients for year 2015 that will be multiplied by CFC for year 2017
-    Kbarcoefs = (
-        Kbar15.div(Kbar15.sum(axis=1), axis=0)
-    ).stack()  # stacked because we need to access CY later
-
-    # also load Kbar data from 2014 as CY is an outlier for Kbar2015
-    Kbar14 = feather.read_feather(
-        "C:/Users/andrieba/Documents/Data/Kbar/Kbar_2014pxp.feather"
-    )
-
-    Kbarcoefs["CY"] = Kbar14.div(Kbar14.sum(axis=1), axis=0).stack()[
-        "CY"
-    ]  # because wrong data for CY in Kbar15
-    Kbarcoefs = Kbarcoefs.unstack()
-
-    for i in range(2016, 2020, 1):
-        GFCF_exio = feather.read_feather(
-            pathexio + "EXIO3/IOT_" + str(i) + "_pxp/Y.feather"
-        ).swaplevel(axis=1)[
-            "Gross fixed capital formation"
-        ]  # aggregated 49 regions, 1 product
-
-        GFCF_exio_rescaled = (
-            GFCF_exio.sum(axis=1)
-            .unstack()  # 49 regions 200 sectors
-            .div(GFCF_over_CFC_WB[str(i)], axis=0)  # 49 regions 1 sector
-            .stack()
-        )
-
-        feather.write_feather(
-            Kbarcoefs.mul(GFCF_exio_rescaled, axis=0),
-            "C:/Users/andrieba/Documents/Data/Kbar/Kbar_" + str(i) + "pxp.feather",
-        )
-
-
-# la somme des lignes donne CFC/GFCF
-
-
-def Kbar2():
 
     CFC_WB = pd.read_excel("World Bank/CFC worldbank.xlsx", header=3, index_col=[0])[
         [str(i) for i in range(2015, 2020, 1)]
@@ -670,6 +575,7 @@ def Lk():
             pathexio + "Kbar/Kbar_" + str(i) + "pxp.feather"
         ).fillna(0)
         Kbar = pd.DataFrame(Kbar, index=Z.index, columns=Z.columns).fillna(0)
+        # EXTREMELY important to reindex, calc_L won't function properly otherwise
 
         Zk = Z + Kbar
         x = Z.sum(axis=1) + Y.sum(axis=1)
@@ -1188,83 +1094,109 @@ def data_Sankey(year, region):
     ).sum()
     data_sankey.reset_index(col_level=0, inplace=True)
 
-    df = (
-        data.xs("CFC - CFC>(Lk-L)Y", level="LY name")
-        .xs(region, level="region cons")
-        .groupby(level="sector prod")
-        .sum()["value"]
-    )
-    data_sankey = data_sankey.append(
-        pd.DataFrame(
-            [
-                [node_dict["CFC"]] * 6,
-                [node_dict["Consumption of fixed capital"]] * 6,
-                df.values,
-                [color_dict[i] for i in df.index.values],
-                ["4. cba"] * 6,
-            ],
-            index=["source", "target", "value", "color", "position"],
-        ).T
-    )
+    if (
+        region
+        in data.xs("CFC>(Lk-L)Y", level="LY name")
+        .index.get_level_values(level="region cons")
+        .unique()
+    ):
+        df = (
+            data.xs("CFC - CFC>(Lk-L)Y", level="LY name")
+            .xs(region, level="region cons")
+            .groupby(level="sector prod")
+            .sum()["value"]
+        )
+        data_sankey = data_sankey.append(
+            pd.DataFrame(
+                [
+                    [node_dict["CFC"]] * 6,
+                    [node_dict["Consumption of fixed capital"]] * 6,
+                    df.values,
+                    [color_dict[i] for i in df.index.values],
+                    ["4. cba"] * 6,
+                ],
+                index=["source", "target", "value", "color", "position"],
+            ).T
+        )
 
-    df = (
-        data.xs("CFC - CFC>(Lk-L)Y", level="LY name")["value"]
+    if (
+        region
+        in data.xs("CFC - CFC>(Lk-L)Y", level="LY name")["value"]
         .unstack(level="region cons")
         .groupby(level="sector prod")
         .sum()
-        .drop(region, axis=1)
-        .sum(axis=1)
-    )
-    data_sankey = data_sankey.append(
-        pd.DataFrame(
-            [
-                [node_dict["RoW - CFC"]] * 6,
-                [node_dict["RoW - Consumption of fixed capital"]] * 6,
-                df.values,
-                [color_dict[i] for i in df.index.values],
-                ["4. cba"] * 6,
-            ],
-            index=["source", "target", "value", "color", "position"],
-        ).T
-    )
+        .columns
+    ):
+        df = (
+            data.xs("CFC - CFC>(Lk-L)Y", level="LY name")["value"]
+            .unstack(level="region cons")
+            .groupby(level="sector prod")
+            .sum()
+            .drop(region, axis=1)
+            .sum(axis=1)
+        )
+        data_sankey = data_sankey.append(
+            pd.DataFrame(
+                [
+                    [node_dict["RoW - CFC"]] * 6,
+                    [node_dict["RoW - Consumption of fixed capital"]] * 6,
+                    df.values,
+                    [color_dict[i] for i in df.index.values],
+                    ["4. cba"] * 6,
+                ],
+                index=["source", "target", "value", "color", "position"],
+            ).T
+        )
 
-    df = (
-        data.xs("CFC>(Lk-L)Y", level="LY name")
-        .xs(region, level="region cons")
-        .groupby(level="sector prod")
-        .sum()["value"]
-    )
-    data_sankey = data_sankey.append(
-        pd.DataFrame(
-            [
-                [node_dict["CFC"]] * 6,
-                [node_dict["RoW - Consumption of fixed capital"]] * 6,
-                df.values,
-                [color_dict[i] for i in df.index.values],
-                ["4. cba"] * 6,
-            ],
-            index=["source", "target", "value", "color", "position"],
-        ).T
-    )
+    if (
+        region
+        in data.xs("CFC>(Lk-L)Y", level="LY name")
+        .index.get_level_values(level="region cons")
+        .unique()
+    ):
+        df = (
+            data.xs("CFC>(Lk-L)Y", level="LY name")
+            .xs(region, level="region cons")
+            .groupby(level="sector prod")
+            .sum()["value"]
+        )
+        data_sankey = data_sankey.append(
+            pd.DataFrame(
+                [
+                    [node_dict["CFC"]] * 6,
+                    [node_dict["RoW - Consumption of fixed capital"]] * 6,
+                    df.values,
+                    [color_dict[i] for i in df.index.values],
+                    ["4. cba"] * 6,
+                ],
+                index=["source", "target", "value", "color", "position"],
+            ).T
+        )
 
-    df = (
-        data.xs("CFC<(Lk-L)Y", level="LY name")
-        .xs(region, level="region cons")
-        .groupby(level="sector prod")
-        .sum()["value"]
-    )
-    data_sankey = data_sankey.append(
-        pd.DataFrame(
-            [
-                [node_dict["RoW - CFC"]] * 6,
-                [node_dict["Consumption of fixed capital"]] * 6,
-                df.values,
-                [color_dict[i] for i in df.index.values],
-                ["4. cba"] * 6,
-            ],
-            index=["source", "target", "value", "color", "position"],
-        ).T
-    )
+    if (
+        region
+        in data.xs("CFC<(Lk-L)Y", level="LY name")
+        .index.get_level_values(level="region cons")
+        .unique()
+    ):
+        df = (
+            data.xs("CFC<(Lk-L)Y", level="LY name")
+            .xs(region, level="region cons")
+            .groupby(level="sector prod")
+            .sum()["value"]
+        )
+        data_sankey = data_sankey.append(
+            pd.DataFrame(
+                [
+                    [node_dict["RoW - CFC"]] * 6,
+                    [node_dict["Consumption of fixed capital"]] * 6,
+                    df.values,
+                    [color_dict[i] for i in df.index.values],
+                    ["4. cba"] * 6,
+                ],
+                index=["source", "target", "value", "color", "position"],
+            ).T
+        )
 
     return node_dict, node_list, data_sankey
 
@@ -1417,16 +1349,14 @@ def fig_sankey(year, region):
 
 
 def pop():
-    MPD = rename_region(
-        pd.read_excel(
-            "MPD/mpd2020.xlsx", sheet_name="Full data", index_col=[0, 2]
-        ).drop("country", axis=1),
-        "countrycode",
-    )
-    MPD_pop = (
-        pd.DataFrame(
-            MPD["pop"].unstack(), index=name_short, columns=range(1995, 2019, 1)
+    pop = (
+        rename_region(
+            pd.read_csv("World Bank/pop.csv", header=[2], index_col=[0])[
+                [str(i) for i in range(1995, 2020, 1)]
+            ],
+            level="Country Name",
         )
+        .drop("Z - Aggregated categories")
         .rename(
             dict(
                 zip(
@@ -1438,7 +1368,11 @@ def pop():
         .groupby(level=0)
         .sum()
     )
-    feather.write_feather(MPD_pop, "pop.feather")
+    pop.columns = [int(i) for i in pop.columns]
+
+    pop.loc["TW"] = pd.read_excel("pop Taiwan.xls", header=0, index_col=0)["TW"]
+
+    feather.write_feather(pop, "pop.feather")
 
 
 def norm_cap():
@@ -1843,99 +1777,8 @@ def nodes_data():
             )
 
 
-# Vendredi matin
-# pop 2019
 # hh from IPCC
 # ajouter Net capital formation pour calcul noeuds RoW (exemple CN cap 1995)
 
 # app rester éveillée
 # app onglets
-
-for i in [2019]:
-    pathIOT = pathexio + "EXIO3/IOT_" + str(i) + "_pxp/"
-
-    Yk = feather.read_feather(pathIOT + "Yk.feather")
-    L = feather.read_feather(pathIOT + "L.feather")
-    L.columns.names = ["region cons", "sector cons"]
-    L.index.names = ["region prod", "sector prod"]
-    Lk = feather.read_feather(pathIOT + "Lk.feather")
-    Lk.columns.names = ["region cons", "sector cons"]
-    Lk.index.names = ["region prod", "sector prod"]
-
-    LY_all = pd.DataFrame()
-    for col in Yk.columns:
-        Y = Yk[col].unstack()
-        Y.index.names = ["region cons", "sector cons"]
-        LY = pd.DataFrame()
-        LkY = pd.DataFrame()
-        for j in Y.columns:
-
-            LY[j] = L.mul(Y[j], axis=1).sum(axis=1)
-            LkY[j] = Lk.mul(Y[j], axis=1).sum(axis=1)
-
-        LY_all = pd.concat(
-            [
-                LY_all,
-                pd.concat([LY, LkY], axis=1, keys=["LY " + col, "LkY " + col]),
-            ],
-            axis=1,
-        )
-
-    LY_all = LY_all.unstack()
-    LY_all.columns.names = ["LY name", "region cons"]
-    LY_all.index.names = ["region prod", "sector prod"]
-
-    SLY = pd.DataFrame()
-
-    S_imp = pd.read_csv(
-        pathexio + "EXIO3/IOT_" + str(i) + "_pxp/impacts/S.txt",
-        delimiter="\t",
-        header=[0, 1],
-        index_col=[0],
-    ).loc[
-        "GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"
-    ]
-    S_imp.index.names = ["region prod", "sector prod"]
-
-    SLY = LY_all.mul(S_imp, axis=0).sum()
-
-    D_pba = (
-        pd.read_csv(
-            pathexio + "EXIO3/IOT_" + str(i) + "_pxp/impacts/D_pba.txt",
-            delimiter="\t",
-            header=[0, 1],
-            index_col=[0],
-        )
-        .loc[
-            "GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"
-        ]
-        .groupby(level="region")
-        .sum()
-    )
-    D_pba.index.names = ["region cons"]
-
-
-i = 1995
-df = pd.DataFrame()
-df["pba"] = D_pba + F_hh
-df["cba"] = (
-    SLY.unstack()
-    .loc[["LY CFC", "LY Government", "LY Households", "LY NCF", "LY NPISHS"]]
-    .sum()
-    + F_hh
-)
-df["cbaK"] = (
-    SLY.unstack()
-    .loc[["LkY CFC", "LkY Government", "LkY Households", "LkY NPISHS"]]
-    .sum()
-    + F_hh
-)
-df["cba hh direct"] = SLY.unstack().loc["LY Households"] + F_hh
-df["cbaK hh direct"] = SLY.unstack().loc["LkY Households"] + F_hh
-df["cba hh"] = SLY.unstack().loc["LY Households"]
-df["cbaK hh"] = SLY.unstack().loc["LkY Households"]
-df.loc["World"] = df.sum()
-pop = feather.read_feather("pop.feather")[i]
-pop.loc["World"] = pop.sum()
-df = df.div(pop, axis=0)
-df = df.div(df.loc["World"], axis=1)
