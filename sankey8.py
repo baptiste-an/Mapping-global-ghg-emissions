@@ -753,26 +753,6 @@ def norm():
     feather.write_feather(df.div(pd.DataFrame(df.T.max())[0], axis=0), "norm.feather")
 
 
-def validation():
-    supRegFromReg = (
-        data.stack()
-        .unstack(level="LY name")["CFC>(Lk-L)Y"]
-        .unstack(level="region cons")[region]
-        .unstack(level="region prod")[region]
-        .sum()
-    )
-    infRoWfromReg = (
-        data.stack()
-        .unstack(level="LY name")["CFC<(Lk-L)Y"]
-        .unstack(level="region cons")
-        .drop(region, axis=1)
-        .sum(axis=1)
-        .unstack(level="region prod")[region]
-        .sum()
-    )
-    supRegFromReg / infRoWfromReg  # almost equal to 1
-
-
 def data_Sankey(year, region):
     pathexio = "C:/Users/andrieba/Documents/Data/"
     pathIOT = pathexio + "EXIO3/IOT_" + str(year) + "_pxp/"
@@ -858,30 +838,6 @@ def data_Sankey(year, region):
             pd.DataFrame(data_reg_exp),
         ]
     ).rename(columns={0: "value"})
-
-    F_hh = feather.read_feather("F_hh.feather")[year].unstack()[region] / 1000
-    share_transport = 0.55
-
-    for ext in F_hh.index:
-        data.loc[
-            "Mobility",
-            "Households direct emissions",
-            region,
-            ext,
-            "Households direct",
-            region,
-        ] = (
-            F_hh.loc[ext] * share_transport
-        )
-
-        data.loc[
-            "Shelter",
-            "Households direct emissions",
-            region,
-            ext,
-            "Households direct",
-            region,
-        ] = F_hh.loc[ext] * (1 - share_transport)
 
     # for FR:
     # "CFC - CFC>(Lk-L)Y"FR from FR + "CFC>(Lk-L)Y" FR from FR
@@ -980,6 +936,440 @@ def data_Sankey(year, region):
         "supRegFromRoW",
     ]
 
+    # 0. ges
+    data.loc[[i for i in data.index if i[4] in left_index], ["0. ges"]] = data.loc[
+        [i for i in data.index if i[4] in left_index]
+    ].index.get_level_values(level="Extensions")
+
+    # 1. imp reg
+    data.loc[[i for i in data.index if i[4] in left_index], ["1. imp reg"]] = (
+        data.loc[[i for i in data.index if i[4] in left_index]].index.get_level_values(
+            level="region prod"
+        )
+        + " "
+    )
+
+    # 2. imp dom
+    Dict_ImpDom = dict.fromkeys(
+        [
+            "Africa",
+            "Asia",
+            "Europe",
+            "Middle East",
+            "North America",
+            "Oceania",
+            "South America",
+        ],
+        "Imports",
+    )
+    Dict_ImpDom[region] = "Territorial"
+    data.loc[[i for i in data.index if i[4] in left_index], ["2. imp dom"]] = (
+        data.loc[[i for i in data.index if i[4] in left_index]]
+        .rename(index=Dict_ImpDom)
+        .index.get_level_values(level="region prod")
+    )
+
+    # 3. pba
+
+    DictRoW = dict.fromkeys(
+        [
+            "Africa",
+            "Asia",
+            "Europe",
+            "Middle East",
+            "North America",
+            "Oceania",
+            "South America",
+        ],
+        "RoW - ",
+    )
+    DictRoW[region] = ""
+
+    data.loc[[i for i in data.index if i[4] in left_index], ["3. pba"]] = data.loc[
+        [i for i in data.index if i[4] in left_index]
+    ].rename(index=DictRoW).index.get_level_values(level="region prod") + data.loc[
+        [i for i in data.index if i[4] in left_index]
+    ].index.get_level_values(
+        level="sector prod"
+    )
+
+    # 4. cba
+
+    Dict_cba = dict(
+        {
+            "LY Government": "Government",
+            "LY Households": "Households",
+            "LY NCF": "Net capital formation",
+            "LY NPISHS": "NPISHS",
+            "CFC - CFC>(Lk-L)Y": "CFC",
+            "CFC>(Lk-L)Y": "CFC",
+            # "infRegFromAll",
+            # "MinusSupRoWFromReg",
+        }
+    )
+    Dict_cba.update(
+        dict.fromkeys(
+            [
+                "(Lk-L)Y Government",
+                "(Lk-L)Y Households",
+                "(Lk-L)Y NCF",
+                "(Lk-L)Y NPISHS",
+            ],
+            "CFCk",
+        )
+    )
+
+    left_index_partial = [
+        "CFC - CFC>(Lk-L)Y",
+        "LY Government",
+        "LY Households",
+        "LY NCF",
+        "LY NPISHS",
+        "CFC>(Lk-L)Y",
+        "(Lk-L)Y Government",
+        "(Lk-L)Y Households",
+        "(Lk-L)Y NCF",
+        "(Lk-L)Y NPISHS",
+    ]
+    data.loc[
+        [i for i in data.index if i[4] in left_index_partial], ["4. cba"]
+    ] = data.loc[[i for i in data.index if i[4] in left_index_partial]].rename(
+        index=DictRoW
+    ).index.get_level_values(
+        level="region cons"
+    ) + data.loc[
+        [i for i in data.index if i[4] in left_index_partial]
+    ].rename(
+        index=Dict_cba
+    ).index.get_level_values(
+        level="LY name"
+    )
+
+    data.loc[
+        [i for i in data.index if i[4] in ["infRegFromAll", "MinusSupRoWFromReg"]],
+        ["4. cba"],
+    ] = "RoW - CFC"
+
+    # 5. endo
+
+    # 6. cbaK
+    DictExp = dict.fromkeys(
+        [
+            "Africa",
+            "Asia",
+            "Europe",
+            "Middle East",
+            "North America",
+            "Oceania",
+            "South America",
+        ],
+        "Exports",
+    )
+    DictCbaK = dict(
+        {
+            "LY Government": "Government",
+            "LY Households": "Households",
+            "LY NCF": "Net capital formation",
+            "LY NPISHS": "NPISHS",
+            "supRegFromRoW": "supRegFromRoW",
+            "(Lk-L)Y Government": "Government",
+            "(Lk-L)Y Households": "Households",
+            "(Lk-L)Y NCF": "Net capital formation",
+            "(Lk-L)Y NPISHS": "NPISHS",
+        }
+    )
+
+    data.loc[[i for i in data.index if i[4] in right_index], ["6. cbaK"]] = (
+        data.loc[[i for i in data.index if i[4] in right_index]]
+        .rename(index=DictExp)
+        .index.get_level_values(level="region cons")
+        + data.loc[[i for i in data.index if i[4] in right_index]]
+        .rename(index=DictCbaK)
+        .index.get_level_values(level="LY name")
+        + " "
+    )  # Space here to differenciate level 5 nodes from level 4 nodes
+
+    data = data.replace(
+        dict(
+            {
+                region + "Government ": "Government ",
+                region + "Households ": "Households ",
+                region + "Net capital formation ": "Net capital formation ",
+                region + "NPISHS ": "NPISHS ",
+                region + "Households direct ": "Households direct ",
+                region + "supRegFromRoW ": np.nan,
+                "ExportsGovernment ": "Exports",
+                "ExportsHouseholds ": "Exports",
+                "ExportsNet capital formation ": "Exports",
+                "ExportsNPISHS ": "Exports",
+                "ExportssupRegFromRow ": "Exports",
+            }
+        )
+    )
+
+    # 7. cons
+
+    data.loc[[i for i in data.index if i[4] in right_index], ["7. cons"]] = data.loc[
+        [i for i in data.index if i[4] in right_index]
+    ].rename(index=DictRoW).index.get_level_values(level="region cons") + data.loc[
+        [i for i in data.index if i[4] in right_index]
+    ].index.get_level_values(
+        level="sector cons"
+    )
+    data = data.replace(
+        dict.fromkeys(
+            [
+                "150100:MACHINERY AND EQUIPMENT",
+                "150200:CONSTRUCTION",
+                "150300:OTHER PRODUCTS",
+                "RoW - 150100:MACHINERY AND EQUIPMENT",
+                "RoW - 150200:CONSTRUCTION",
+                "RoW - 150300:OTHER PRODUCTS",
+                "None",
+                "RoW - None",
+            ],
+            np.nan,
+        )
+    )
+    data.loc[
+        [i for i in data.index if i[4] == "LY NCF" and i[5] != region], ["7. cons"]
+    ] = "RoW - Net capital formation "
+
+    # 8. exp
+
+    data.loc[
+        [i for i in data.index if i[4] in right_index and i[5] != region], ["8. exp"]
+    ] = data.loc[
+        [i for i in data.index if i[4] in right_index and i[5] != region]
+    ].index.get_level_values(
+        level="region cons"
+    )
+
+    # Add households direct
+
+    F_hh = feather.read_feather("F_hh.feather")[year].unstack()[region] / 1000
+    share_transport = 0.55
+
+    for ext in F_hh.index:
+        data.loc[
+            "Mobility",
+            "Households direct emissions",
+            region,
+            ext,
+            "Households direct",
+            region,
+        ] = [
+            F_hh.loc[ext] * share_transport,
+            ext,
+            region + " ",
+            "Territorial",
+            "Households direct emissions",
+            "Households direct",
+            "Households direct ",
+            "Mobility",
+            np.nan,
+        ]
+
+        data.loc[
+            "Shelter",
+            "Households direct emissions",
+            region,
+            ext,
+            "Households direct",
+            region,
+        ] = [
+            F_hh.loc[ext] * (1 - share_transport),
+            ext,
+            region + " ",
+            "Territorial",
+            "Households direct emissions",
+            "Households direct",
+            "Households direct ",
+            "Shelter",
+            np.nan,
+        ]
+
+    # Nodes
+
+    position = [
+        "0. ges",
+        "1. imp reg",
+        "2. imp dom",
+        "3. pba",
+        "4. cba",
+        # "5. endo",
+        "6. cbaK",
+        "7. cons",
+        "8. exp",
+    ]
+
+    node_list = []
+    for j in position:
+        node_list.extend(list(dict.fromkeys(data.reset_index()[j])))
+    node_list = [x for x in node_list if str(x) != "nan"]
+    node_dict = dict(zip(node_list, list(range(0, len(node_list), 1))))
+
+    data_sankey = pd.DataFrame()
+    for j in range(0, len(position) - 1, 1):
+        data_j = pd.DataFrame()
+        data_j["source"] = data[position[j]].replace(node_dict)
+        data_j["target"] = data[position[j + 1]].replace(node_dict)
+        data_j["value"] = data["value"]
+        data_j["color label"] = data.index.get_level_values(level="sector prod")
+        data_j["position"] = position[j]
+        data_sankey[j] = data_j.stack(dropna=False)
+    data_sankey = data_sankey.unstack().stack(level=0)
+    data_sankey = data_sankey[["source", "target", "value", "color label", "position"]]
+
+    color_dict = dict(
+        zip(
+            [
+                "Households direct emissions",
+                "Agriculture-food",
+                "Energy industry",
+                "Heavy industry",
+                "Manufacturing industry",
+                "Services",
+                "Transport services",
+            ],
+            [
+                "#8de5a1",
+                "#a1c9f4",
+                "#cfcfcf",
+                # "#d0bbff",
+                "#debb9b",
+                "#fab0e4",
+                "#ff9f9b",
+                "#ffb482",
+                # "#fffea3"
+            ],
+        )
+    )
+
+    data_sankey["color"] = data_sankey["color label"].replace(color_dict)
+    data_sankey = pd.DataFrame(data_sankey.reset_index())[
+        ["source", "target", "color", "value", "position"]
+    ]
+    data_sankey.set_index(["source", "target", "color", "position"], inplace=True)
+    data_sankey = data_sankey.groupby(
+        level=["source", "target", "color", "position"]
+    ).sum()
+    data_sankey.reset_index(col_level=0, inplace=True)
+
+    # junction
+
+    if (
+        region
+        in data.xs("CFC - CFC>(Lk-L)Y", level="LY name")
+        .index.get_level_values(level="region cons")
+        .unique()
+    ):
+        df = (
+            data.xs("CFC - CFC>(Lk-L)Y", level="LY name")
+            .xs(region, level="region cons")
+            .groupby(level="sector prod")
+            .sum()["value"]
+        )
+        data_sankey = data_sankey.append(
+            pd.DataFrame(
+                [
+                    [node_dict["CFC"]] * len(df),
+                    [node_dict["CFCk"]] * len(df),
+                    df.values,
+                    [color_dict[i] for i in df.index.values],
+                    ["4. cba"] * len(df),
+                ],
+                index=["source", "target", "value", "color", "position"],
+            ).T
+        )
+
+    try:
+        df = (
+            data.xs("CFC - CFC>(Lk-L)Y", level="LY name")["value"]
+            .unstack(level="region cons")
+            .groupby(level="sector prod")
+            .sum()
+            .drop(region, axis=1)
+            .sum(axis=1)
+        )
+    except KeyError:
+        df = (
+            data.xs("CFC - CFC>(Lk-L)Y", level="LY name")["value"]
+            .unstack(level="region cons")
+            .groupby(level="sector prod")
+            .sum()
+            .sum(axis=1)
+        )
+    data_sankey = data_sankey.append(
+        pd.DataFrame(
+            [
+                [node_dict["RoW - CFC"]] * len(df),
+                [node_dict["RoW - CFCk"]] * len(df),
+                df.values,
+                [color_dict[i] for i in df.index.values],
+                ["4. cba"] * len(df),
+            ],
+            index=["source", "target", "value", "color", "position"],
+        ).T
+    )
+
+    if (
+        region
+        in data.xs("CFC>(Lk-L)Y", level="LY name")
+        .index.get_level_values(level="region cons")
+        .unique()
+    ):
+        df = (
+            data.xs("CFC>(Lk-L)Y", level="LY name")
+            .xs(region, level="region cons")
+            .groupby(level="sector prod")
+            .sum()["value"]
+        )
+        data_sankey = data_sankey.append(
+            pd.DataFrame(
+                [
+                    [node_dict["CFC"]] * len(df),
+                    [node_dict["RoW - CFCk"]] * len(df),
+                    df.values,
+                    [color_dict[i] for i in df.index.values],
+                    ["4. cba"] * len(df),
+                ],
+                index=["source", "target", "value", "color", "position"],
+            ).T
+        )
+
+    try:
+        df = (
+            data.xs("CFC>(Lk-L)Y", level="LY name")
+            .stack()
+            .unstack(level="region cons")
+            .drop(region, axis=1)
+            .sum(axis=1)
+            .groupby(level="sector prod")
+            .sum()
+        )
+    except KeyError:
+        df = (
+            data.xs("CFC>(Lk-L)Y", level="LY name")
+            .groupby(level="sector prod")
+            .sum()["value"]
+        )
+        data_sankey = data_sankey.append(
+            pd.DataFrame(
+                [
+                    [node_dict["RoW - CFC"]] * len(df),
+                    [node_dict["CFCk"]] * len(df),
+                    df.values,
+                    [color_dict[i] for i in df.index.values],
+                    ["4. cba"] * len(df),
+                ],
+                index=["source", "target", "value", "color", "position"],
+            ).T
+        )
+    return node_dict, node_list, data_sankey
+
+
+def suite():
     Dict2 = dict.fromkeys(
         [
             "Africa",
@@ -1670,9 +2060,9 @@ def fig_sankey_cap(year, region):
 
 
 def node_y(nodes, node, white, color, region):
-    if node == "Consumption of fixed capital":
+    if node == "CFCk":
         node = "CFC"
-    if node == "RoW - Consumption of fixed capital":
+    if node == "RoW - CFCk":
         node = "RoW - CFC"
     if node == "Exports":
         node = "RoW - Clothing"
@@ -1795,7 +2185,7 @@ def node_y(nodes, node, white, color, region):
                 "RoW - Government",
                 "RoW - NPISHS",
                 "RoW - Net capital formation",
-                "RoW - Consumption of fixed capital ",
+                # "RoW - Consumption of fixed capital ",
             ]
         )
     elif pos == "6. cbaK":
