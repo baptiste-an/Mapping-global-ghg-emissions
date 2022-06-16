@@ -2048,8 +2048,8 @@ def node_y(nodes, node, white, color, region):
 def nodes_data():
     population = feather.read_feather("pop.feather")
     for year in range(2019, 2020, 1):
-        for region in pd.read_excel("regions.xlsx", index_col=0).index:
-            # for region in ["CN"]:
+        # for region in pd.read_excel("regions.xlsx", index_col=0).index:
+        for region in ["PT"]:
             pop = population[year].loc[region] / 1000
             node_dict, node_list, data_sankey = data_Sankey(year, region)
             nodes = pd.DataFrame(
