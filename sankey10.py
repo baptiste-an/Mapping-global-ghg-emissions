@@ -1315,10 +1315,10 @@ def data_Sankey(year, region):
             [
                 "#8de5a1",
                 "#a1c9f4",
+                "#fab0e4",
                 "#cfcfcf",
                 # "#d0bbff",
                 "#debb9b",
-                "#fab0e4",
                 "#ff9f9b",
                 "#ffb482",
                 # "#fffea3"
@@ -2001,8 +2001,8 @@ def node_y(nodes, node, white, color, region):
 def nodes_data():
     population = feather.read_feather("pop.feather")
     for year in range(2019, 2020, 1):
-        # for region in pd.read_excel("regions.xlsx", index_col=0).index:
-        for region in ["CN"]:
+        for region in pd.read_excel("regions.xlsx", index_col=0).index:
+            # for region in ["CN"]:
             pop = population[year].loc[region] / 1000
             node_dict, node_list, data_sankey = data_Sankey(year, region)
             nodes = pd.DataFrame(
