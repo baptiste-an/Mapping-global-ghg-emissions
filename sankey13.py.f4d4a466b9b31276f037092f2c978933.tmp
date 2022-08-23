@@ -3390,7 +3390,7 @@ def data_from_SLY(SLY, region):
 # data.stack().unstack(level="LY name")["CFC>(Lk-L)Y"].unstack(level="region cons")[[region]].stack().unstack(level="region prod").drop(region, axis=1).stack().unstack(level=3).sum()
 
 
-def level_0(left_index, data):
+def level_0(data,left_index):
     # 0. ges
 
     data.loc[[i for i in data.index if i[4] in left_index], ["0. ges"]] = data.loc[
@@ -3400,7 +3400,7 @@ def level_0(left_index, data):
     return data
 
 
-def level_1(region, data):
+def level_1(data,left_index):
 
     # 1. imp reg
     data.loc[[i for i in data.index if i[4] in left_index], ["1. imp reg"]] = (
@@ -3412,7 +3412,7 @@ def level_1(region, data):
     return data
 
 
-def level_2(region, data):
+def level_2(region, data, left_index):
     # 2. imp dom
     Dict_ImpDom = dict.fromkeys(
         [
@@ -3435,22 +3435,8 @@ def level_2(region, data):
     return data
 
 
-def level_3(region, data):
+def level_3(region, data, DictRoW, left_index):
     # 3. pba
-
-    DictRoW = dict.fromkeys(
-        [
-            "Africa",
-            "Asia",
-            "Europe",
-            "Middle East",
-            "North America",
-            "Oceania",
-            "South America",
-        ],
-        "RoW - ",
-    )
-    DictRoW[region] = ""
 
     data.loc[[i for i in data.index if i[4] in left_index], ["3. pba"]] = data.loc[
         [i for i in data.index if i[4] in left_index]
@@ -3462,7 +3448,7 @@ def level_3(region, data):
     return data
 
 
-def level_4(region, data, DictRoW):
+def level_4(region, data, DictRoW, left_index):
 
     # 4. cba
 
@@ -3480,33 +3466,6 @@ def level_4(region, data, DictRoW):
         }
     )
 
-    # left_index_partial = [
-    #     "CFC - CFC>(Lk-L)Y",
-    #     "LY Government",
-    #     "LY Households",
-    #     "LY NCF sup",
-    #     "LY NPISHS",
-    #     "CFC>(Lk-L)Y",
-    # ]
-    # data.loc[
-    #     [i for i in data.index if i[4] in left_index_partial], ["4. cba"]
-    # ] = data.loc[[i for i in data.index if i[4] in left_index_partial]].rename(
-    #     index=DictRoW
-    # ).index.get_level_values(
-    #     level="region cons"
-    # ) + data.loc[
-    #     [i for i in data.index if i[4] in left_index_partial]
-    # ].rename(
-    #     index=Dict_cba
-    # ).index.get_level_values(
-    #     level="LY name"
-    # )
-
-    # data.loc[
-    #     [i for i in data.index if i[4] in ["infRegFromAll", "MinusSupRoWFromReg"]],
-    #     ["4. cba"],
-    # ] = "RoW - CFC"
-
     # i[4] : 'LY name'
     data.loc[[i for i in data.index if i[4] in left_index], ["4. cba"]] = data.loc[
         [i for i in data.index if i[4] in left_index]
@@ -3521,14 +3480,14 @@ def level_4(region, data, DictRoW):
     return data
 
 
-def level_5(region, data):
+def level_5(data):
 
     # 5. ncf
 
     return data
 
 
-def level_6(region, data, DictRoW):
+def level_6(data, DictRoW):
     # 6. endo
 
     data.loc[
@@ -3571,7 +3530,7 @@ def level_6(region, data, DictRoW):
     return data
 
 
-def level_7(region, data):
+def level_7(region, data,right_index):
     data2 = data
 
     # 7. cbaK
@@ -3636,7 +3595,7 @@ def level_7(region, data):
     return data2
 
 
-def level_8(region, data, DictRoW):
+def level_8(region, data, DictRoW,right_index):
     data2 = data
 
     # 8. cons
@@ -3680,7 +3639,7 @@ def level_8(region, data, DictRoW):
     return data2
 
 
-def level_9(region, data):
+def level_9(region, data, right_index):
 
     # 9. exp
 
@@ -3744,7 +3703,7 @@ def data_households(region, data):
     return data
 
 
-def data_STV(data_sankey, region, data):
+def data_STV(data_sankey, data,color_dict):
     # STV = source, target, value
     position = [
         "0. ges",
@@ -4218,16 +4177,16 @@ def data_Sankey(year, region):
     data = pd.DataFrame()
     data = data_from_SLY(SLY, region)
 
-    data = level_0(region, data)
-    data = level_1(region, data)
-    data = level_2(region, data)
-    data = level_3(region, data)
-    data = level_4(region, data, DictRoW)
-    data = level_5(region, data)
-    data = level_6(region, data, DictRoW)
-    data = level_7(region, data)
-    data = level_8(region, data, DictRoW)
-    data = level_9(region, data)
+    data = level_0(data,left_index)
+    data = level_1(data,left_index)
+    data = level_2(region, data, left_index)
+    data = level_3(region, data, DictRoW, left_index)
+    data = level_4(region, data, DictRoW, left_index)
+    data = level_5(data)
+    data = level_6(data, DictRoW)
+    data = level_7(region, data,right_index)
+    data = level_8(region, data, DictRoW,right_index)
+    data = level_9(region, data, right_index)
     data = data_households(region, data)
 
     # Nodes
@@ -4238,7 +4197,7 @@ def data_Sankey(year, region):
     node_dict = dict(zip(node_list, list(range(0, len(node_list), 1))))
 
     data_sankey = pd.DataFrame()
-    data_sankey = data_STV(data_sankey, region, data)
+    data_sankey = data_STV(data_sankey, data,color_dict)
 
     # junctions
     data_sankey = junction_4_to_5(data_sankey, region, data)
@@ -4250,8 +4209,8 @@ def data_Sankey(year, region):
 def nodes_data():
     population = feather.read_feather("pop.feather")
     for year in range(1995, 1996, 1):
-        # for region in pd.read_excel("regions.xlsx", index_col=0).index:
-        for region in ["RU"]:
+        for region in pd.read_excel("regions.xlsx", index_col=0).index:
+        #for region in ["RU"]:
             pop = population[year].loc[region] / 1000
             node_dict, node_list, data_sankey = data_Sankey(year, region)
             nodes = pd.DataFrame(
