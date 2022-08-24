@@ -2086,7 +2086,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     # CFC to CFCk
     try:
         df = (
-            data.xs("(Lk-L)Y - CFC<(Lk-L)Y", level="LY name")
+            data.xs("CFC - CFC>(Lk-L)Y", level="LY name")
             .xs(region, level="region cons")
             .groupby(level="sector prod")
             .sum()["value"]
@@ -2112,7 +2112,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     # RoW - CFC to RoW - CFCk
     try:
         df = (
-            data.xs("(Lk-L)Y - CFC<(Lk-L)Y", level="LY name")["value"]
+            data.xs("CFC - CFC>(Lk-L)Y", level="LY name")["value"]
             .unstack(level="region cons")
             .groupby(level="sector prod")
             .sum()
@@ -2137,15 +2137,13 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     except KeyError:
         None
 
-    # CFC to RoW - CFCk ####modified
+    # CFC to RoW - CFCk
     try:
         df = (
-            data.xs("CFC<(Lk-L)Y", level="LY name")["value"]
-            .unstack(level="region cons")
+            data.xs("CFC>(Lk-L)Y", level="LY name")
+            .xs(region, level="region cons")
             .groupby(level="sector prod")
-            .sum()
-            .drop(region, axis=1)
-            .sum(axis=1)
+            .sum()["value"]
         )
         data_sankey2 = pd.concat(
             [

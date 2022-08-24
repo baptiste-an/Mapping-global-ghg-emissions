@@ -1203,8 +1203,8 @@ def variables(region):
         "RoW - CFC",
         # "GCF",
         # "RoW - GCF",
-        "Negative capital formation",
-        "RoW - Negative capital formation",
+        "LY NCF inf",
+        "RoW - LY NCF inf",
     ]
 
     color_dict = dict(
@@ -1337,20 +1337,6 @@ def data_from_SLY(SLY, region):
 
     data = df
     data["CFC - CFC>(Lk-L)Y"] = data["LY CFC"].fillna(0) - data["CFC>(Lk-L)Y"].fillna(0)
-
-    data["(Lk-L)Y - CFC<(Lk-L)Y"] = (
-        data[
-            [
-                "(Lk-L)Y Government",
-                "(Lk-L)Y Households",
-                "(Lk-L)Y NCF sup",
-                "(Lk-L)Y NPISHS",
-            ]
-        ]
-        .sum(axis=1)
-        .fillna(0)
-        - data["CFC<(Lk-L)Y"].fillna(0)
-    )
     data = data.drop("LY CFC", axis=1)
     data = (
         pd.DataFrame(data.stack())
@@ -1905,7 +1891,7 @@ def junction_4_to_5(data_sankey, region, data, node_dict, color_dict):
     except KeyError:
         None
 
-    # LY NCF inf to CFC
+    # NCF inf to CFC
 
     try:
         df = (
@@ -1919,7 +1905,7 @@ def junction_4_to_5(data_sankey, region, data, node_dict, color_dict):
                 data_sankey2,
                 pd.DataFrame(
                     [
-                        [node_dict["Negative capital formation"]] * len(df),
+                        [node_dict["LY NCF inf"]] * len(df),
                         [node_dict["CFC"]] * len(df),
                         df.values,
                         [color_dict[i] for i in df.index.values],
@@ -1932,34 +1918,7 @@ def junction_4_to_5(data_sankey, region, data, node_dict, color_dict):
     except KeyError:
         None
 
-    # (Lk-L)Y NCF inf to CFC
-
-    try:
-        df = (
-            data.xs("(Lk-L)Y NCF inf", level="LY name")
-            .xs(region, level="region cons")
-            .groupby(level="sector prod")
-            .sum()["value"]
-        )
-        data_sankey2 = pd.concat(
-            [
-                data_sankey2,
-                pd.DataFrame(
-                    [
-                        [node_dict["Negative capital formation"]] * len(df),
-                        [node_dict["CFC"]] * len(df),
-                        df.values,
-                        [color_dict[i] for i in df.index.values],
-                        ["4.5 inf"] * len(df),
-                    ],
-                    index=["source", "target", "value", "color", "position"],
-                ).T,
-            ]
-        )
-    except KeyError:
-        None
-
-    # RoW - LY NCF inf to RoW - CFC
+    # RoW - NCF inf to RoW - CFC
     try:
         df = (
             data.xs("LY NCF inf", level="LY name")
@@ -1975,36 +1934,7 @@ def junction_4_to_5(data_sankey, region, data, node_dict, color_dict):
                 data_sankey2,
                 pd.DataFrame(
                     [
-                        [node_dict["RoW - Negative capital formation"]] * len(df),
-                        [node_dict["RoW - CFC"]] * len(df),
-                        df.values,
-                        [color_dict[i] for i in df.index.values],
-                        ["4.5 inf"] * len(df),
-                    ],
-                    index=["source", "target", "value", "color", "position"],
-                ).T,
-            ]
-        )
-    except KeyError:
-        None
-
-    # RoW - (Lk-L)Y NCF inf to RoW - CFC
-    try:
-        df = (
-            data.xs("(Lk-L)Y NCF inf", level="LY name")
-            .unstack(level="region cons")
-            .swaplevel(axis=1)
-            .drop(region, axis=1)
-            .stack(level=0)
-            .groupby(level="sector prod")
-            .sum()["value"]
-        )
-        data_sankey2 = pd.concat(
-            [
-                data_sankey2,
-                pd.DataFrame(
-                    [
-                        [node_dict["RoW - Negative capital formation"]] * len(df),
+                        [node_dict["RoW - LY NCF inf"]] * len(df),
                         [node_dict["RoW - CFC"]] * len(df),
                         df.values,
                         [color_dict[i] for i in df.index.values],
@@ -2086,7 +2016,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     # CFC to CFCk
     try:
         df = (
-            data.xs("(Lk-L)Y - CFC<(Lk-L)Y", level="LY name")
+            data.xs("CFC - CFC>(Lk-L)Y", level="LY name")
             .xs(region, level="region cons")
             .groupby(level="sector prod")
             .sum()["value"]
@@ -2112,7 +2042,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     # RoW - CFC to RoW - CFCk
     try:
         df = (
-            data.xs("(Lk-L)Y - CFC<(Lk-L)Y", level="LY name")["value"]
+            data.xs("CFC - CFC>(Lk-L)Y", level="LY name")["value"]
             .unstack(level="region cons")
             .groupby(level="sector prod")
             .sum()
@@ -2137,15 +2067,13 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     except KeyError:
         None
 
-    # CFC to RoW - CFCk ####modified
+    # CFC to RoW - CFCk
     try:
         df = (
-            data.xs("CFC<(Lk-L)Y", level="LY name")["value"]
-            .unstack(level="region cons")
+            data.xs("CFC>(Lk-L)Y", level="LY name")
+            .xs(region, level="region cons")
             .groupby(level="sector prod")
-            .sum()
-            .drop(region, axis=1)
-            .sum(axis=1)
+            .sum()["value"]
         )
         data_sankey2 = pd.concat(
             [
@@ -2270,10 +2198,7 @@ def nodes_data():
                             .set_index("source")["position"]
                             .loc[node_dict[node]]
                         )
-                        if node in [
-                            "Negative capital formation",
-                            "RoW - Negative capital formation",
-                        ]:
+                        if node in ["LY NCF inf", "RoW - LY NCF inf"]:
                             nodes["position"].loc[node] = "4. cba"
                         elif type(a) == str:
                             nodes["position"].loc[node] = a
@@ -2305,7 +2230,8 @@ def nodes_data():
                 except KeyError:
                     nodes = nodes.drop(node)
             nodes.loc["Net capital formation "]["position"] = "7. cbaK"
-
+            # nodes.loc["LY NCF inf"]["position"] = "4.5 inf"
+            # nodes.loc["RoW - LY NCF inf"]["position"] = "4.5 inf"
             nodes = nodes.drop(
                 [i for i in nodes.index if nodes["value Mt"].isnull().loc[i]]
             )
@@ -2473,8 +2399,8 @@ def node_y(nodes, node, white, color, region):
                 "Net capital formation",
                 # "Consumption of fixed capital",
                 "GCF",
-                "Negative capital formation",
-                "RoW - Negative capital formation",
+                "LY NCF inf",
+                "RoW - LY NCF inf",
                 "RoW - GCF",
                 "RoW - Households",
                 "RoW - Government",
@@ -2611,12 +2537,12 @@ def Nodes(region, year, height, top_margin, bottom_margin, pad):
     nodes["x"].loc["Exports"] = 0.65
 
     try:
-        nodes["x"].loc["RoW - Negative capital formation"] = 0.38
+        nodes["x"].loc["RoW - LY NCF inf"] = 0.38
     except KeyError:
         None
 
     try:
-        nodes["x"].loc["Negative capital formation"] = 0.38
+        nodes["x"].loc["LY NCF inf"] = 0.38
     except KeyError:
         None
     # nodes["x"].loc[["CFC","RoW - CFC"]] = 0.76

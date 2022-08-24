@@ -1205,6 +1205,7 @@ def variables(region):
         # "RoW - GCF",
         "Negative capital formation",
         "RoW - Negative capital formation",
+        "CFC imports re-exported",
     ]
 
     color_dict = dict(
@@ -1302,18 +1303,36 @@ def data_from_SLY(SLY, region):
         .unstack(level="LY name")
     )
 
-    df = data["LY CFC"].unstack(level="sector cons").sum(axis=1) - (
-        data[
-            [
-                "(Lk-L)Y Government",
-                "(Lk-L)Y Households",
-                "(Lk-L)Y NCF sup",
-                "(Lk-L)Y NPISHS",
+    try:
+        df = (
+            data["LY CFC"].unstack(level="sector cons").sum(axis=1)
+            + data["(Lk-L)Y NCF inf"].unstack(level="sector cons").sum(axis=1)
+            - (
+                data[
+                    [
+                        "(Lk-L)Y Government",
+                        "(Lk-L)Y Households",
+                        "(Lk-L)Y NCF sup",
+                        "(Lk-L)Y NPISHS",
+                    ]
+                ]
+                .unstack(level="sector cons")
+                .sum(axis=1)
+            )
+        )
+    except KeyError:
+        df = data["LY CFC"].unstack(level="sector cons").sum(axis=1) - (
+            data[
+                [
+                    "(Lk-L)Y Government",
+                    "(Lk-L)Y Households",
+                    "(Lk-L)Y NCF sup",
+                    "(Lk-L)Y NPISHS",
+                ]
             ]
-        ]
-        .unstack(level="sector cons")
-        .sum(axis=1)
-    )
+            .unstack(level="sector cons")
+            .sum(axis=1)
+        )
 
     sup = pd.DataFrame(
         df[df > 0],
@@ -2074,10 +2093,6 @@ def junction_4_to_5(data_sankey, region, data, node_dict, color_dict):
     return data_sankey2
 
 
-# imports re exported (supRegFromRoW trop grand, le calculer plus proprement
-# ou pas du tout)
-
-
 def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     data_sankey2 = data_sankey
 
@@ -2110,14 +2125,55 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         None
 
     # RoW - CFC to RoW - CFCk
+    # try:
+    #     df = (
+    #         data.xs("(Lk-L)Y - CFC<(Lk-L)Y", level="LY name")["value"]
+    #         .unstack(level="region cons")
+    #         .groupby(level="sector prod")
+    #         .sum()
+    #         .drop(region, axis=1)
+    #         .sum(axis=1)
+    #     )
+    #     data_sankey2 = pd.concat(
+    #         [
+    #             data_sankey2,
+    #             pd.DataFrame(
+    #                 [
+    #                     [node_dict["RoW - CFC"]] * len(df),
+    #                     [node_dict["RoW - CFCk"]] * len(df),
+    #                     df.values,
+    #                     [color_dict[i] for i in df.index.values],
+    #                     ["5. ncf"] * len(df),
+    #                 ],
+    #                 index=["source", "target", "value", "color", "position"],
+    #             ).T,
+    #         ]
+    #     )
+    # except KeyError:
+    #     None
+
+    # RoW - CFC to RoW - CFCk
     try:
         df = (
-            data.xs("(Lk-L)Y - CFC<(Lk-L)Y", level="LY name")["value"]
+            data["value"]
+            .unstack(level="LY name")[
+                [
+                    "(Lk-L)Y Government",
+                    "(Lk-L)Y Households",
+                    "(Lk-L)Y NCF sup",
+                    "(Lk-L)Y NPISHS",
+                ]
+            ]
+            .sum(axis=1)
             .unstack(level="region cons")
             .groupby(level="sector prod")
             .sum()
             .drop(region, axis=1)
             .sum(axis=1)
+            - data.xs("CFC>(Lk-L)Y", level="LY name")
+            .xs(region, level="region cons")
+            .groupby(level="sector prod")
+            .sum()["value"]
         )
         data_sankey2 = pd.concat(
             [
@@ -2137,15 +2193,13 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     except KeyError:
         None
 
-    # CFC to RoW - CFCk ####modified
+    # CFC to RoW - CFCk
     try:
         df = (
-            data.xs("CFC<(Lk-L)Y", level="LY name")["value"]
-            .unstack(level="region cons")
+            data.xs("CFC>(Lk-L)Y", level="LY name")
+            .xs(region, level="region cons")
             .groupby(level="sector prod")
-            .sum()
-            .drop(region, axis=1)
-            .sum(axis=1)
+            .sum()["value"]
         )
         data_sankey2 = pd.concat(
             [
@@ -2194,6 +2248,56 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     return data_sankey2
 
 
+def imports_reexported(data_sankey, region, node_dict, data, color_dict):
+    data_sankey2 = data_sankey
+
+    # RoW - CFC to RoW - CFCk
+    # and RoW - CFCk to CFC imports re-exported
+    try:
+        df = (
+            data["value"]
+            .xs("CFC>(Lk-L)Y", level="LY name")
+            .xs(region, level="region cons")
+            .drop(region, level="region prod")
+            .groupby(level="sector prod")
+            .sum()
+        )
+        data_sankey2 = pd.concat(
+            [
+                data_sankey2,
+                pd.DataFrame(
+                    [
+                        [node_dict["RoW - CFC"]] * len(df),
+                        [node_dict["RoW - CFCk"]] * len(df),
+                        df.values,
+                        [color_dict[i] for i in df.index.values],
+                        ["5. ncf"] * len(df),
+                    ],
+                    index=["source", "target", "value", "color", "position"],
+                ).T,
+            ]
+        )
+        data_sankey2 = pd.concat(
+            [
+                data_sankey2,
+                pd.DataFrame(
+                    [
+                        [node_dict["RoW - CFCk"]] * len(df),
+                        [node_dict["CFC imports re-exported"]] * len(df),
+                        df.values,
+                        [color_dict[i] for i in df.index.values],
+                        ["6. endo"] * len(df),
+                    ],
+                    index=["source", "target", "value", "color", "position"],
+                ).T,
+            ]
+        )
+    except KeyError:
+        None
+
+    return data_sankey2
+
+
 def data_Sankey(year, region):
     pathexio = "C:/Users/andrieba/Documents/Data/"
     pathIOT = pathexio + "EXIO3/IOT_" + str(year) + "_pxp/"
@@ -2231,6 +2335,7 @@ def data_Sankey(year, region):
     # junctions
     data_sankey = junction_4_to_5(data_sankey, region, data, node_dict, color_dict)
     data_sankey = junction_5_to_6(data_sankey, region, data, node_dict, color_dict)
+    data_sankey = imports_reexported(data_sankey, region, node_dict, data, color_dict)
 
     return node_dict, node_list, data_sankey
 
@@ -2350,6 +2455,8 @@ def node_y(nodes, node, white, color, region):
         node = "RoW - GCF"
     if node == "Exports":
         node = "RoW - Health"
+    if node == "CFC imports re-exported":
+        node = "RoW - Mobility"
 
     pos = nodes["position"].loc[node]
     df = nodes.reset_index().set_index(["position", "index"]).loc[pos]["value Mt"]
@@ -2609,6 +2716,10 @@ def Nodes(region, year, height, top_margin, bottom_margin, pad):
     )
 
     nodes["x"].loc["Exports"] = 0.65
+    try:
+        nodes["x"].loc["CFC imports re-exported"] = 0.65
+    except KeyError:
+        None
 
     try:
         nodes["x"].loc["RoW - Negative capital formation"] = 0.38
