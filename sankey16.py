@@ -2748,10 +2748,6 @@ def Nodes(region, year, height, top_margin, bottom_margin, pad):
     return nodes, pad2
 
 
-# il faut ajouter re exports (supRegFromRoW) à partir de exports
-# (déjà pris en compte dans CFC to RoW CFCk)
-
-
 def fig_sankey(region, year):
 
     norm = feather.read_feather("norm.feather")
