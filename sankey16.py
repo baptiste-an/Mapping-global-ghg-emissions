@@ -2667,12 +2667,11 @@ def node_y(nodes, node, white, color, region):
     )
 
 
-def Nodes(region, year, height, top_margin, bottom_margin, pad):
+def Nodes(region, year, height, top_margin, bottom_margin, pad, ratio):
     nodes = feather.read_feather(
         "Sankeys/" + region + "/nodes" + region + str(year) + ".feather"
     )
 
-    ratio = 1
     size = height - top_margin - bottom_margin
     n = max(nodes.reset_index().set_index("position").index.value_counts())
     pad2 = (size - ratio * (size - (n + 1) * pad)) / (n + 1)
@@ -2768,7 +2767,7 @@ def fig_sankey(region, year):
 
     ratio = norm.loc[region].loc[year]
 
-    nodes, pad2 = Nodes(region, year, height, top_margin, bottom_margin, pad)
+    nodes, pad2 = Nodes(region, year, height, top_margin, bottom_margin, pad, ratio)
     # node_dict, node_list, data_sankey = data_Sankey(year, region)
 
     link = dict(

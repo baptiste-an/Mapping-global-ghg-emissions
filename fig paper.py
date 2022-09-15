@@ -1814,9 +1814,7 @@ def data():
         df["cba"] = (
             SLY.loc[["CFC", "Government", "Households", "NCF", "NPISHS"]].sum() + F_hh
         )
-        df["cbaK"] = (
-            SLkY.loc[["Government", "Households", "NCF", "NPISHS"]].sum() + F_hh
-        )
+        df["cbaK"] = SLkY.loc[["Government", "Households", "NPISHS"]].sum() + F_hh
         df["cba hh direct"] = SLY.loc["Households"] + F_hh
         df["cbaK hh direct"] = SLkY.loc["Households"] + F_hh
         df["cba hh"] = SLY.loc["Households"]
@@ -1832,6 +1830,20 @@ def data():
     return data
 
 
+data = feather.read_feather("data.feather")
+
+
+for i in data.swaplevel().unstack().index:
+    df = data.swaplevel().unstack().loc[i].unstack().T
+    fig, axes = plt.subplots(1, figsize=(5, 5))
+    axes.plot(df.div(df[1995], axis=0).T)
+
+
+for i in data.swaplevel().unstack().index:
+    df = data.swaplevel().unstack().loc[i].unstack().T
+    fig, axes = plt.subplots(1, figsize=(5, 5))
+    axes.plot(df.div(df.loc["cba"], axis=1).T)
+
 # Vendredi matin
 # pop 2019
 # hh from IPCC
@@ -1840,226 +1852,93 @@ def data():
 # app rester éveillée
 # app onglets
 
-# for i in [1995]:
-#     pathIOT = pathexio + "EXIO3/IOT_" + str(i) + "_pxp/"
-
-#     Yk = feather.read_feather(pathIOT + "Yk.feather")
-#     L = feather.read_feather(pathIOT + "L.feather")
-#     L.columns.names = ["region cons", "sector cons"]
-#     L.index.names = ["region prod", "sector prod"]
-#     Lk = feather.read_feather(pathIOT + "Lk.feather")
-#     Lk.columns.names = ["region cons", "sector cons"]
-#     Lk.index.names = ["region prod", "sector prod"]
-
-#     LY_all = pd.DataFrame()
-#     for col in Yk.columns:
-#         Y = Yk[col].unstack()
-#         Y.index.names = ["region cons", "sector cons"]
-#         LY = pd.DataFrame()
-#         LkY = pd.DataFrame()
-#         for j in Y.columns:
-
-#             LY[j] = L.mul(Y[j], axis=1).sum(axis=1)
-#             LkY[j] = Lk.mul(Y[j], axis=1).sum(axis=1)
-
-#         LY_all = pd.concat(
-#             [
-#                 LY_all,
-#                 pd.concat([LY, LkY], axis=1, keys=["LY " + col, "LkY " + col]),
-#             ],
-#             axis=1,
-#         )
-
-#     LY_all = LY_all.stack()
-#     LY_all.columns.names = ["LY name", "region cons"]
-#     LY_all.index.names = ["region prod", "sector prod"]
-
-#     SLY = pd.DataFrame()
-
-#     S_imp = pd.read_csv(
-#         pathexio + "EXIO3/IOT_" + str(i) + "_pxp/impacts/S.txt",
-#         delimiter="\t",
-#         header=[0, 1],
-#         index_col=[0],
-#     ).loc[
-#         "GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"
-#     ]
-#     S_imp.index.names = ["region prod", "sector prod"]
-
-#     SLY = LY_all.mul(S_imp, axis=0).sum()
-
-#     D_pba = (
-#         pd.read_csv(
-#             pathexio + "EXIO3/IOT_" + str(i) + "_pxp/impacts/D_pba.txt",
-#             delimiter="\t",
-#             header=[0, 1],
-#             index_col=[0],
-#         )
-#         .loc[
-#             "GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"
-#         ]
-#         .groupby(level="region")
-#         .sum()
-#     )
-#     D_pba.index.names = ["region cons"]
-
-#     F_hh = (
-#         pd.read_csv(
-#             pathexio + "EXIO3/IOT_" + str(i) + "_pxp/impacts/F_hh.txt",
-#             delimiter="\t",
-#             header=[0, 1],
-#             index_col=[0],
-#         )
-#         .loc[
-#             "GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"
-#         ]
-#         .groupby(level="region")
-#         .sum()
-#     )
-#     F_hh.index.names = ["region cons"]
-
-#     pop = feather.read_feather("pop.feather")[i]
-
-
-# i = 1995
-# df = pd.DataFrame()
-# df["pba"] = D_pba + F_hh
-# df["cba"] = (
-#     SLY.unstack()
-#     .loc[["LY CFC", "LY Government", "LY Households", "LY NCF", "LY NPISHS"]]
-#     .sum()
-#     + F_hh
-# )
-# df["cbaK"] = (
-#     SLY.unstack()
-#     .loc[["LkY CFC", "LkY Government", "LkY Households", "LkY NPISHS"]]
-#     .sum()
-#     + F_hh
-# )
-# df["cba hh direct"] = SLY.unstack().loc["LY Households"] + F_hh
-# df["cbaK hh direct"] = SLY.unstack().loc["LkY Households"] + F_hh
-# df["cba hh"] = SLY.unstack().loc["LY Households"]
-# df["cbaK hh"] = SLY.unstack().loc["LkY Households"]
-# df.loc["World"] = df.sum()
-# pop = feather.read_feather("pop.feather")[i]
-# pop.loc["World"] = pop.sum()
-# df = df.div(pop, axis=0)
-# df = df.sort_values(by="pba")
-# # df = df.div(df.loc["World"], axis=1)
-
-
-# fig, axes = plt.subplots(1, figsize=(10, 15))
-# k = 0
-# dictcol = {
-#     "pba": "white",
-#     "cba": "black",
-#     "cbaK": "red",
-#     "cba hh direct": "green",
-#     "cbaK hh direct": "orange",
-#     "cba hh": "gray",
-#     "cbaK hh": "pink",
-# }
-# for i in df.index[:-1]:
-#     plt.vlines(x=df.loc[i].loc["pba"], ymin=k, ymax=k + 6, axes=axes)
-#     axes.annotate(i, xy=(df.loc[i].loc["pba"], k - 3))
-#     for j in df.columns:
-#         axes.scatter(df[j].loc[i], k, color=dictcol[j])
-#         plt.hlines(
-#             y=k,
-#             xmin=min(df.loc[i].loc["pba"], df[j].loc[i]),
-#             xmax=max(df.loc[i].loc["pba"], df[j].loc[i]),
-#             linewidth=0.5,
-#             ls="dashed",
-#             color=dictcol[j],
-#         )
-#         k += 1
-#     k += 1
-# (df.drop("pba", axis=1).T.max() / df.drop("pba", axis=1).T.min()).sort_values()
-# # Résultat 1 : ca change par un facteur X
-
 
 # # Il faut dire quelque chose de la proportionnalité entre pays
 # # Par exemple comparer cbaK hh et cba China US, il y a un facteur 2
 # # Ca mais pas satisfaisant :
 
-# i = 1995
-# df = pd.DataFrame()
-# df["pba"] = D_pba + F_hh
-# df["cba"] = (
-#     SLY.unstack()
-#     .loc[["LY CFC", "LY Government", "LY Households", "LY NCF", "LY NPISHS"]]
-#     .sum()
-#     + F_hh
-# )
-# df["cbaK"] = (
-#     SLY.unstack()
-#     .loc[["LkY CFC", "LkY Government", "LkY Households", "LkY NPISHS"]]
-#     .sum()
-#     + F_hh
-# )
-# df["cba hh direct"] = SLY.unstack().loc["LY Households"] + F_hh
-# df["cbaK hh direct"] = SLY.unstack().loc["LkY Households"] + F_hh
-# df["cba hh"] = SLY.unstack().loc["LY Households"]
-# df["cbaK hh"] = SLY.unstack().loc["LkY Households"]
-# df.loc["World"] = df.sum()
-# pop = feather.read_feather("pop.feather")[i]
-# pop.loc["World"] = pop.sum()
-# df = df.div(pop, axis=0)
-# df = df.sort_values(by="cbaK")
-
-# df = df.div(df.loc["CN"], axis=1)
-# df = df.div(df["pba"], axis=0)
-
-
-# fig, axes = plt.subplots(1, figsize=(10, 15))
-# k = 0
-# dictcol = {
-#     "pba": "white",
-#     "cba": "black",
-#     "cbaK": "red",
-#     "cba hh direct": "green",
-#     "cbaK hh direct": "orange",
-#     "cba hh": "gray",
-#     "cbaK hh": "pink",
-# }
-# for i in df.index[:-1]:
-#     plt.vlines(x=df.loc[i].loc["pba"], ymin=k, ymax=k + 6, axes=axes)
-#     axes.annotate(i, xy=(df.loc[i].loc["pba"], k - 3))
-#     for j in df.columns:
-#         axes.scatter(df[j].loc[i], k, color=dictcol[j])
-#         plt.hlines(
-#             y=k,
-#             xmin=min(df.loc[i].loc["pba"], df[j].loc[i]),
-#             xmax=max(df.loc[i].loc["pba"], df[j].loc[i]),
-#             linewidth=0.5,
-#             ls="dashed",
-#             color=dictcol[j],
-#         )
-#         k += 1
-#     k += 1
+fig, axes = plt.subplots(1, figsize=(10, 15))
+k = 0
+dictcol = {
+    "pba": "white",
+    "cba": "black",
+    "cbaK": "red",
+    "cba hh direct": "green",
+    "cbaK hh direct": "orange",
+    "cba hh": "gray",
+    "cbaK hh": "pink",
+}
+df = data[2019].unstack().T
+for i in df.index[:-1]:
+    plt.vlines(x=df.loc[i].loc["pba"], ymin=k, ymax=k + 6, axes=axes)
+    axes.annotate(i, xy=(df.loc[i].loc["pba"], k - 3))
+    for j in df.columns:
+        axes.scatter(df[j].loc[i], k, color=dictcol[j])
+        plt.hlines(
+            y=k,
+            xmin=min(df.loc[i].loc["pba"], df[j].loc[i]),
+            xmax=max(df.loc[i].loc["pba"], df[j].loc[i]),
+            linewidth=0.5,
+            ls="dashed",
+            color=dictcol[j],
+        )
+        k += 1
+    k += 1
 
 
-for i in [1995]:
-    pathIOT = pathexio + "EXIO3/IOT_" + str(i) + "_pxp/"
+fig, axes = plt.subplots(1, figsize=(10, 15))
+k = 0
+dictcol = {
+    "pba": "white",
+    "cba": "black",
+    "cbaK": "red",
+    "cba hh direct": "green",
+    "cbaK hh direct": "orange",
+    "cba hh": "gray",
+    "cbaK hh": "pink",
+}
+df = data[1995].unstack().T.sort_values(by="cba")
+for i in df.index[:-1]:
+    plt.vlines(x=df.loc[i].loc["cba"], ymin=k, ymax=k, axes=axes)
+    axes.annotate(i, xy=(df.loc[i].loc["cba"], k))
+    for j in ["cbaK"]:
+        axes.scatter(df[j].loc[i], k, color=dictcol[j])
+        plt.hlines(
+            y=k,
+            xmin=min(df.loc[i].loc["cba"], df[j].loc[i]),
+            xmax=max(df.loc[i].loc["cba"], df[j].loc[i]),
+            linewidth=0.5,
+            ls="dashed",
+            color=dictcol[j],
+        )
+        k += 1
+    k += 1
 
-    Yk = feather.read_feather(pathIOT + "Yk.feather")
-    L = feather.read_feather(pathIOT + "L.feather")
-    L.columns.names = ["region cons", "sector cons"]
-    L.index.names = ["region prod", "sector prod"]
-    Lk = feather.read_feather(pathIOT + "Lk.feather")
-    Lk.columns.names = ["region cons", "sector cons"]
-    Lk.index.names = ["region prod", "sector prod"]
 
-    S_imp = pd.read_csv(
-        pathexio + "EXIO3/IOT_" + str(i) + "_pxp/impacts/S.txt",
-        delimiter="\t",
-        header=[0, 1],
-        index_col=[0],
-    ).loc[
-        "GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"
-    ]
-    S_imp.index.names = ["region prod", "sector prod"]
-
-    SL = L.mul(S_imp, axis=0).sum()
-    SL.index.names = ["region cons", "sector cons"]
-    SLYtest = Yk.unstack().mul(SL, axis=0).sum()
+fig, axes = plt.subplots(1, figsize=(10, 15))
+k = 0
+dictcol = {
+    "pba": "white",
+    "cba": "black",
+    "cbaK": "red",
+    "cba hh direct": "green",
+    "cbaK hh direct": "orange",
+    "cba hh": "gray",
+    "cbaK hh": "pink",
+}
+df = data[1995].unstack().T.sort_values(by="cba")
+for i in df.index[:-1]:
+    plt.vlines(x=df.loc[i].loc["cba"], ymin=k, ymax=k, axes=axes)
+    axes.annotate(i, xy=(df.loc[i].loc["cba"], k))
+    for j in ["cbaK"]:
+        axes.scatter(df[j].loc[i], k, color=dictcol[j])
+        plt.hlines(
+            y=k,
+            xmin=min(df.loc[i].loc["cba"], df[j].loc[i]),
+            xmax=max(df.loc[i].loc["cba"], df[j].loc[i]),
+            linewidth=0.5,
+            ls="dashed",
+            color=dictcol[j],
+        )
+        k += 1
+    k += 1
