@@ -2822,9 +2822,9 @@ def fig_sankey(region, year):
     )
 
     # fig.update_traces(textfont_size=7)
-    # fig.write_image(
-    #     "Sankeys/" + region + "/fig2" + region + str(year) + ".pdf", engine="orca"
-    # )
+    fig.write_image(
+        "Sankeys/" + region + "/fig2" + region + str(year) + ".pdf", engine="orca"
+    )
     # # fig.write_image("SankeyFR" + str(year) + ".svg", engine="orca")
 
     fig.show()
