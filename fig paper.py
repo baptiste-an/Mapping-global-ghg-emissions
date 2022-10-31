@@ -25,9 +25,7 @@ dictreg = dict(zip(df["region"], df["full name"]))
 
 if not os.path.exists("Sankeys"):
     os.mkdir("Sankeys")
-pio.orca.config.executable = (
-    "C:/Users/andrieba/anaconda3/pkgs/plotly-orca-1.2.1-1/orca_app/orca.exe"
-)
+pio.orca.config.executable = "C:/Users/andrieba/anaconda3/pkgs/plotly-orca-1.2.1-1/orca_app/orca.exe"
 pio.orca.config.save()
 pio.kaleido.scope.mathjax = None  # ne sert à rien car mathjax ne fonctionne pas
 pyo.init_notebook_mode()
@@ -78,9 +76,7 @@ for i in [
     n for n in cc.valid_class if n != "name_short"
 ]:  # we convert all the regions in cc to name short and add it to the dict
     dict_regions.update(cc.get_correspondence_dict(i, "name_short"))
-name_short = cc.ISO3as("name_short")[
-    "name_short"
-].values  # array containing all region names in short_name format
+name_short = cc.ISO3as("name_short")["name_short"].values  # array containing all region names in short_name format
 
 
 def dict_regions_update():
@@ -136,9 +132,7 @@ def dict_regions_update():
     dict_regions["Saint Helena"] = "St. Helena"
     dict_regions["China, Hong Kong SAR"] = "Hong Kong"
     dict_regions["China, Macao SAR"] = "Macau"
-    dict_regions[
-        "Bonaire, Sint Eustatius and Saba"
-    ] = "Bonaire, Saint Eustatius and Saba"
+    dict_regions["Bonaire, Sint Eustatius and Saba"] = "Bonaire, Saint Eustatius and Saba"
     dict_regions["Curaçao"] = "Curacao"
     dict_regions["Saint Barthélemy"] = "St. Barths"
     dict_regions["Saint Martin (French part)"] = "Saint-Martin"
@@ -380,63 +374,37 @@ def Kbar():
     ]
 
     # we want to set to NaN values for regions that don't have both CFC and GFCF data
-    CFC_WB = (
-        CFC_WB * GFCF_WB / GFCF_WB
-    )  # in case some countries have data for CFC but not GFCF
+    CFC_WB = CFC_WB * GFCF_WB / GFCF_WB  # in case some countries have data for CFC but not GFCF
     GFCF_WB = GFCF_WB * CFC_WB / CFC_WB
 
     CFC_WB = rename_region(CFC_WB, "Country Name").drop("Z - Aggregated categories")
     # rename the regions to a common format
     CFC_WB["region"] = cc.convert(names=CFC_WB.index, to="EXIO3")
     # convert the common format to EXIOBASE format
-    CFC_WB = (
-        CFC_WB.reset_index()
-        .set_index("region")
-        .drop("Country Name", axis=1)
-        .groupby(level="region")
-        .sum()
-    )
+    CFC_WB = CFC_WB.reset_index().set_index("region").drop("Country Name", axis=1).groupby(level="region").sum()
     # define EXIOBASE regions as index
 
     GFCF_WB = rename_region(GFCF_WB, "Country Name").drop("Z - Aggregated categories")
     GFCF_WB["region"] = cc.convert(names=GFCF_WB.index, to="EXIO3")
-    GFCF_WB = (
-        GFCF_WB.reset_index()
-        .set_index("region")
-        .drop("Country Name", axis=1)
-        .groupby(level="region")
-        .sum()
-    )
+    GFCF_WB = GFCF_WB.reset_index().set_index("region").drop("Country Name", axis=1).groupby(level="region").sum()
 
     GFCF_over_CFC_WB = GFCF_WB / CFC_WB
     GFCF_over_CFC_WB.loc["TW"] = GFCF_over_CFC_WB.loc["CN"]
     # hypothesis: ratio of GFCF/CFC is same for Taiwan than for China
 
-    Kbar15 = feather.read_feather(
-        "C:/Users/andrieba/Documents/Data/Kbar/Kbar_2015pxp.feather"
-    )
+    Kbar15 = feather.read_feather("C:/Users/andrieba/Documents/Data/Kbar/Kbar_2015pxp.feather")
 
     # We calculate coefficients for year 2015 that will be multiplied by CFC for year 2017
-    Kbarcoefs = (
-        Kbar15.div(Kbar15.sum(axis=1), axis=0)
-    ).stack()  # stacked because we need to access CY later
+    Kbarcoefs = (Kbar15.div(Kbar15.sum(axis=1), axis=0)).stack()  # stacked because we need to access CY later
 
     # also load Kbar data from 2014 as CY is an outlier for Kbar2015
-    Kbar14 = feather.read_feather(
-        "C:/Users/andrieba/Documents/Data/Kbar/Kbar_2014pxp.feather"
-    )
+    Kbar14 = feather.read_feather("C:/Users/andrieba/Documents/Data/Kbar/Kbar_2014pxp.feather")
 
-    Kbarcoefs["CY"] = Kbar14.div(Kbar14.sum(axis=1), axis=0).stack()[
-        "CY"
-    ]  # because wrong data for CY in Kbar15
-    Kbarcoefs = pd.DataFrame(
-        Kbarcoefs.unstack(), index=Kbar14.index, columns=Kbar14.columns
-    )
+    Kbarcoefs["CY"] = Kbar14.div(Kbar14.sum(axis=1), axis=0).stack()["CY"]  # because wrong data for CY in Kbar15
+    Kbarcoefs = pd.DataFrame(Kbarcoefs.unstack(), index=Kbar14.index, columns=Kbar14.columns)
 
     for i in range(2016, 2020, 1):
-        GFCF_exio = feather.read_feather(
-            pathexio + "EXIO3/IOT_" + str(i) + "_pxp/Y"
-        ).swaplevel(axis=1)[
+        GFCF_exio = feather.read_feather(pathexio + "EXIO3/IOT_" + str(i) + "_pxp/Y").swaplevel(axis=1)[
             "Gross fixed capital formation"
         ]  # aggregated 49 regions, 1 product
 
@@ -478,15 +446,9 @@ def agg(df: pd.DataFrame, table: pd.DataFrame, axis=0) -> pd.DataFrame:
     """
     if isinstance(table.index, pd.MultiIndex):
         if axis == 0:
-            df_agg = (
-                df.rename(index=dict(table.index)).groupby(level=df.index.names).sum()
-            )
+            df_agg = df.rename(index=dict(table.index)).groupby(level=df.index.names).sum()
         else:
-            df_agg = (
-                df.rename(columns=dict(table.index))
-                .groupby(level=df.columns.names, axis=1)
-                .sum()
-            )
+            df_agg = df.rename(columns=dict(table.index)).groupby(level=df.columns.names, axis=1).sum()
         return df_agg
 
     else:
@@ -516,18 +478,12 @@ def Y_all():
     for i in range(1995, 2020, 1):
         pathIOT = pathexio + "EXIO3/IOT_" + str(i) + "_pxp/"
 
-        Kbar = feather.read_feather(
-            pathexio + "Kbar/Kbar_" + str(i) + "pxp.feather"
-        ).fillna(0)
+        Kbar = feather.read_feather(pathexio + "Kbar/Kbar_" + str(i) + "pxp.feather").fillna(0)
         Y = feather.read_feather(pathIOT + "Y.feather")
 
         df = pd.DataFrame([], index=Y.stack(level=0).index)
-        df["Households"] = Y.stack(level=0)[
-            "Final consumption expenditure by households"
-        ]
-        df["Government"] = Y.stack(level=0)[
-            "Final consumption expenditure by government"
-        ]
+        df["Households"] = Y.stack(level=0)["Final consumption expenditure by households"]
+        df["Government"] = Y.stack(level=0)["Final consumption expenditure by government"]
         df["NPISHS"] = Y.stack(level=0)[
             "Final consumption expenditure by non-profit organisations serving households (NPISH)"
         ]
@@ -565,15 +521,9 @@ def Lk():
     """
     for i in range(1995, 2020, 1):
         pathIOT = pathexio + "EXIO3/IOT_" + str(i) + "_pxp/"
-        Y = (
-            feather.read_feather(pathIOT + "Y.feather")
-            .groupby(level="region", axis=1)
-            .sum()
-        )
+        Y = feather.read_feather(pathIOT + "Y.feather").groupby(level="region", axis=1).sum()
         Z = feather.read_feather(pathIOT + "Z.feather").fillna(0)
-        Kbar = feather.read_feather(
-            pathexio + "Kbar/Kbar_" + str(i) + "pxp.feather"
-        ).fillna(0)
+        Kbar = feather.read_feather(pathexio + "Kbar/Kbar_" + str(i) + "pxp.feather").fillna(0)
 
         Zk = Z + Kbar
         x = Z.sum(axis=1) + Y.sum(axis=1)
@@ -605,12 +555,8 @@ def SLY():
     if not os.path.exists("SLY"):
         os.mkdir("SLY")
 
-    conc_sec_cons = pd.read_excel(
-        "concordance.xlsx", sheet_name="sector cons", index_col=0
-    )
-    conc_sec_prod = pd.read_excel(
-        "concordance.xlsx", sheet_name="sector prod", index_col=[0, 1]
-    )
+    conc_sec_cons = pd.read_excel("concordance.xlsx", sheet_name="sector cons", index_col=0)
+    conc_sec_prod = pd.read_excel("concordance.xlsx", sheet_name="sector prod", index_col=[0, 1])
     conc_reg_prod = pd.read_excel(
         "concordance.xlsx",
         sheet_name="region prod",
@@ -659,9 +605,7 @@ def SLY():
             LY_all = pd.concat(
                 [
                     LY_all,
-                    pd.concat(
-                        [LY, LkY], axis=1, keys=["LY " + col, "LkY " + col]
-                    ).unstack(),
+                    pd.concat([LY, LkY], axis=1, keys=["LY " + col, "LkY " + col]).unstack(),
                 ],
                 axis=1,
             )
@@ -681,9 +625,7 @@ def SLY():
         S_imp.columns.names = ["region prod", "sector prod"]
 
         for j in impacts:
-            SLY[j] = (
-                agg(LY_all.mul(S_imp.loc[j], axis=0), conc_sec_prod).unstack().unstack()
-            )
+            SLY[j] = agg(LY_all.mul(S_imp.loc[j], axis=0), conc_sec_prod).unstack().unstack()
 
         SLY.columns.names = ["Extensions"]
 
@@ -726,9 +668,7 @@ def F_hh():
                 }
             )
         )
-        F_hh_imp.loc["SF6"] = (
-            F_hh_imp.loc["GHG"] / 1000000 - F_hh_imp.loc[["CO2", "N2O", "CH4"]].sum()
-        )
+        F_hh_imp.loc["SF6"] = F_hh_imp.loc["GHG"] / 1000000 - F_hh_imp.loc[["CO2", "N2O", "CH4"]].sum()
         F_hh_imp = F_hh_imp.drop("GHG")
         F_hh[year] = F_hh_imp.groupby(level="region", axis=1).sum().stack()
     feather.write_feather(F_hh, "F_hh.feather")
@@ -742,12 +682,8 @@ def norm():
     df = pd.DataFrame([], columns=[i for i in range(1995, 2020, 1)], index=regions)
     for year in range(1995, 2020, 1):
         for region in regions:
-            data_sankey = feather.read_feather(
-                "Sankeys/" + region + "/data" + region + str(year) + ".feather"
-            )
-            df.loc[region].loc[year] = (
-                data_sankey.set_index("position").loc["0. ges"].sum().loc["value"]
-            )
+            data_sankey = feather.read_feather("Sankeys/" + region + "/data" + region + str(year) + ".feather")
+            df.loc[region].loc[year] = data_sankey.set_index("position").loc["0. ges"].sum().loc["value"]
     feather.write_feather(df.div(pd.DataFrame(df.T.max())[0], axis=0), "norm.feather")
 
 
@@ -768,26 +704,18 @@ def data_Sankey(year, region):
     SLY = SLY.drop("GHG", axis=1).stack().unstack(level=0)
 
     df = SLY["LY CFC"].unstack(level="sector cons").sum(axis=1) - (
-        SLY[["LkY Government", "LkY Households", "LkY NCF", "LkY NPISHS"]]
-        .unstack(level="sector cons")
-        .sum(axis=1)
-        - SLY[["LY Government", "LY Households", "LY NCF", "LY NPISHS"]]
-        .unstack(level="sector cons")
-        .sum(axis=1)
+        SLY[["LkY Government", "LkY Households", "LkY NCF", "LkY NPISHS"]].unstack(level="sector cons").sum(axis=1)
+        - SLY[["LY Government", "LY Households", "LY NCF", "LY NPISHS"]].unstack(level="sector cons").sum(axis=1)
     )
     sup = pd.DataFrame(
         df[df > 0],
         index=df.index,
-        columns=pd.MultiIndex.from_tuples(
-            [("CFC>(Lk-L)Y", "None")], names=["LY name", "sector cons"]
-        ),
+        columns=pd.MultiIndex.from_tuples([("CFC>(Lk-L)Y", "None")], names=["LY name", "sector cons"]),
     )
     inf = pd.DataFrame(
         -df[df < 0],
         index=df.index,
-        columns=pd.MultiIndex.from_tuples(
-            [("CFC<(Lk-L)Y", "None")], names=["LY name", "sector cons"]
-        ),
+        columns=pd.MultiIndex.from_tuples([("CFC<(Lk-L)Y", "None")], names=["LY name", "sector cons"]),
     )
     df = pd.concat([SLY.unstack(level="sector cons"), sup, inf], axis=1).stack()
     df = df.reorder_levels(SLY.index.names)
@@ -814,11 +742,7 @@ def data_Sankey(year, region):
     data_reg_cons = pd.DataFrame(data.stack().unstack(level="region cons")[region])
     data_reg_cons.columns.name = "region cons"
     data_reg_cons = data_reg_cons.stack()
-    data_reg_exp = pd.DataFrame(
-        data.drop([region], level="region cons")
-        .stack()
-        .unstack(level="region prod")[region]
-    )
+    data_reg_exp = pd.DataFrame(data.drop([region], level="region cons").stack().unstack(level="region prod")[region])
     data_reg_exp.columns.name = "region prod"
     data_reg_exp = data_reg_exp.stack().reorder_levels(data_reg_cons.index.names)
     data = pd.concat(
@@ -832,25 +756,13 @@ def data_Sankey(year, region):
     share_transport = 0.55
 
     for ext in F_hh.index:
-        data.loc[
-            "Mobility",
-            "Households direct emissions",
-            region,
-            ext,
-            "Households direct",
-            region,
-        ] = (
+        data.loc["Mobility", "Households direct emissions", region, ext, "Households direct", region,] = (
             F_hh.loc[ext] * share_transport
         )
 
-        data.loc[
-            "Shelter",
-            "Households direct emissions",
-            region,
-            ext,
-            "Households direct",
-            region,
-        ] = F_hh.loc[ext] * (1 - share_transport)
+        data.loc["Shelter", "Households direct emissions", region, ext, "Households direct", region,] = F_hh.loc[
+            ext
+        ] * (1 - share_transport)
 
     Dict2 = dict.fromkeys(
         [
@@ -943,20 +855,14 @@ def data_Sankey(year, region):
 
     data["0. ges"] = data.index.get_level_values(level="Extensions")
 
-    data["2. imp dom"] = data.rename(index=Dict2).index.get_level_values(
-        level="region prod"
+    data["2. imp dom"] = data.rename(index=Dict2).index.get_level_values(level="region prod")
+    data["3. pba"] = data.rename(index=Dict3).index.get_level_values(level="region prod") + data.index.get_level_values(
+        level="sector prod"
     )
-    data["3. pba"] = data.rename(index=Dict3).index.get_level_values(
-        level="region prod"
-    ) + data.index.get_level_values(level="sector prod")
-    data["4. cba"] = data.rename(index=Dict3).index.get_level_values(
-        level="region cons"
-    ) + data.rename(index=Dict4).index.get_level_values(level="LY name")
-    data = data.replace(
-        dict(
-            {"sup": "CFC", "inf": "RoW - CFC", "RoW - sup": np.nan, "RoW - inf": np.nan}
-        )
-    )
+    data["4. cba"] = data.rename(index=Dict3).index.get_level_values(level="region cons") + data.rename(
+        index=Dict4
+    ).index.get_level_values(level="LY name")
+    data = data.replace(dict({"sup": "CFC", "inf": "RoW - CFC", "RoW - sup": np.nan, "RoW - inf": np.nan}))
     # 5.jonction
     data["6. cbaK"] = (
         data.rename(index=DictExp).index.get_level_values(level="region cons")
@@ -1083,13 +989,9 @@ def data_Sankey(year, region):
     )
 
     data_sankey["color"] = data_sankey["color label"].replace(color_dict)
-    data_sankey = pd.DataFrame(data_sankey.reset_index())[
-        ["source", "target", "color", "value", "position"]
-    ]
+    data_sankey = pd.DataFrame(data_sankey.reset_index())[["source", "target", "color", "value", "position"]]
     data_sankey.set_index(["source", "target", "color", "position"], inplace=True)
-    data_sankey = data_sankey.groupby(
-        level=["source", "target", "color", "position"]
-    ).sum()
+    data_sankey = data_sankey.groupby(level=["source", "target", "color", "position"]).sum()
     data_sankey.reset_index(col_level=0, inplace=True)
 
     df = (
@@ -1175,12 +1077,10 @@ def data_Sankey(year, region):
 
 def fig_sankey(year, region):
 
-    nodes = feather.read_feather(
-        "Sankeys/" + region + "/nodes" + region + str(year) + ".feather"
+    nodes = feather.read_feather("Sankeys/" + region + "/nodes" + region + str(year) + ".feather")
+    data_sankey = feather.read_feather("Sankeys/" + region + "/data" + region + str(year) + ".feather").sort_values(
+        by="color"
     )
-    data_sankey = feather.read_feather(
-        "Sankeys/" + region + "/data" + region + str(year) + ".feather"
-    ).sort_values(by="color")
     norm = feather.read_feather("norm.feather")
 
     height = 450
@@ -1313,24 +1213,18 @@ def fig_sankey(year, region):
     )
 
     # fig.update_traces(textfont_size=7)
-    fig.write_image(
-        "Sankeys/" + region + "/fig2" + region + str(year) + ".pdf", engine="orca"
-    )
+    fig.write_image("Sankeys/" + region + "/fig2" + region + str(year) + ".pdf", engine="orca")
     # fig.write_image("SankeyFR" + str(year) + ".svg", engine="orca")
     fig.show()
 
 
 def pop():
     MPD = rename_region(
-        pd.read_excel(
-            "MPD/mpd2020.xlsx", sheet_name="Full data", index_col=[0, 2]
-        ).drop("country", axis=1),
+        pd.read_excel("MPD/mpd2020.xlsx", sheet_name="Full data", index_col=[0, 2]).drop("country", axis=1),
         "countrycode",
     )
     MPD_pop = (
-        pd.DataFrame(
-            MPD["pop"].unstack(), index=name_short, columns=range(1995, 2019, 1)
-        )
+        pd.DataFrame(MPD["pop"].unstack(), index=name_short, columns=range(1995, 2019, 1))
         .rename(
             dict(
                 zip(
@@ -1352,26 +1246,16 @@ def norm_cap():
     for year in range(1995, 2020, 1):
         for region in regions:
             pop = population[year].loc[region] / 1000
-            data_sankey = feather.read_feather(
-                "Sankeys/" + region + "/data" + region + str(year) + ".feather"
-            )
-            df.loc[region].loc[year] = (
-                data_sankey.set_index("position").loc["0. ges"].sum().loc["value"] / pop
-            )
-    feather.write_feather(
-        df.div(pd.DataFrame(df.T.max())[0], axis=0), "norm_cap.feather"
-    )
+            data_sankey = feather.read_feather("Sankeys/" + region + "/data" + region + str(year) + ".feather")
+            df.loc[region].loc[year] = data_sankey.set_index("position").loc["0. ges"].sum().loc["value"] / pop
+    feather.write_feather(df.div(pd.DataFrame(df.T.max())[0], axis=0), "norm_cap.feather")
 
 
 def fig_sankey_cap(year, region):
 
     pop = feather.read_feather("pop.feather")[year].loc[region] / 1000
-    nodes = feather.read_feather(
-        "Sankeys/" + region + "/nodes" + region + str(year) + ".feather"
-    )
-    data_sankey = feather.read_feather(
-        "Sankeys/" + region + "/data" + region + str(year) + ".feather"
-    )
+    nodes = feather.read_feather("Sankeys/" + region + "/nodes" + region + str(year) + ".feather")
+    data_sankey = feather.read_feather("Sankeys/" + region + "/data" + region + str(year) + ".feather")
     data_sankey["value"] = data_sankey["value"] / pop
 
     norm = feather.read_feather("norm_cap.feather")
@@ -1567,20 +1451,14 @@ def node_y(nodes, node, white, color, region):
     if pos == "0. ges":
         df = df.reindex(["CO2", "CH4", "N2O", "SF6"])
     elif pos == "1. imp reg":
-        df = df.reindex(
-            pd.Index([region + " "]).union(
-                df.index.sort_values().drop(region + " "), sort=False
-            )
-        )
+        df = df.reindex(pd.Index([region + " "]).union(df.index.sort_values().drop(region + " "), sort=False))
     elif pos == "2. imp dom":
         df = df.reindex(["Territorial", "Imports"])
     elif pos == "3. pba":
         df = df.reindex(
             pd.Index(["Households direct emissions"])
             .union(
-                df.loc[df.index.str[:2] != "Ro"].index.drop(
-                    "Households direct emissions"
-                ),
+                df.loc[df.index.str[:2] != "Ro"].index.drop("Households direct emissions"),
                 sort=False,
             )
             .union(df.loc[df.index.str[:2] == "Ro"].index, sort=False)
@@ -1662,10 +1540,7 @@ def node_y(nodes, node, white, color, region):
                 "South America",
             ]
         )
-    return (
-        len(df.loc[:node]) / (len(df) + 1) * white
-        + (df.loc[:node][:-1].sum() + df.loc[node] / 2) / total * color
-    )
+    return len(df.loc[:node]) / (len(df) + 1) * white + (df.loc[:node][:-1].sum() + df.loc[node] / 2) / total * color
 
 
 def nodes_data():
@@ -1693,23 +1568,15 @@ def nodes_data():
                 # j_modified = pd.DataFrame(node_list).replace(dict(FR="France"))[0].loc[i]
                 # Mettre dict complet pour toutes régions
                 if node_dict[node] in source_data.index:
-                    nodes["value Mt"].loc[node] = source_data["value"].loc[
-                        node_dict[node]
-                    ]
+                    nodes["value Mt"].loc[node] = source_data["value"].loc[node_dict[node]]
 
-                    a = (
-                        data_sankey.reset_index()
-                        .set_index("source")["position"]
-                        .loc[node_dict[node]]
-                    )
+                    a = data_sankey.reset_index().set_index("source")["position"].loc[node_dict[node]]
                     if type(a) == str:
                         nodes["position"].loc[node] = a
                     else:
                         nodes["position"].loc[node] = a.values[0]
                 else:
-                    nodes["value Mt"].loc[node] = target_data["value"].loc[
-                        node_dict[node]
-                    ]
+                    nodes["value Mt"].loc[node] = target_data["value"].loc[node_dict[node]]
                     if node in [
                         "Africa",
                         "Asia",
@@ -1725,22 +1592,13 @@ def nodes_data():
                     else:
                         nodes["position"].loc[node] = "7. cons"
             nodes.loc["Net capital formation "]["position"] = "6. cbaK"
-            nodes["label Mt"] = (
-                nodes.index + " (" + [str(int(i)) for i in nodes["value Mt"]] + ")"
-            )
+            nodes["label Mt"] = nodes.index + " (" + [str(int(i)) for i in nodes["value Mt"]] + ")"
             nodes["value t/cap"] = nodes["value Mt"] / pop
-            nodes["label t/cap"] = (
-                nodes.index
-                + " ("
-                + [str(round(i, 2)) for i in nodes["value t/cap"]]
-                + ")"
-            )
+            nodes["label t/cap"] = nodes.index + " (" + [str(round(i, 2)) for i in nodes["value t/cap"]] + ")"
 
             if not os.path.exists("Sankeys/" + region):
                 os.mkdir("Sankeys/" + region)
-            feather.write_feather(
-                nodes, "Sankeys/" + region + "/nodes" + region + str(year) + ".feather"
-            )
+            feather.write_feather(nodes, "Sankeys/" + region + "/nodes" + region + str(year) + ".feather")
             feather.write_feather(
                 data_sankey,
                 "Sankeys/" + region + "/data" + region + str(year) + ".feather",
@@ -1766,9 +1624,7 @@ def data():
             delimiter="\t",
             header=[0, 1],
             index_col=[0],
-        ).loc[
-            "GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"
-        ]
+        ).loc["GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"]
         S_imp.index.names = ["region prod", "sector prod"]
 
         SL = L.mul(S_imp, axis=0).sum()
@@ -1786,9 +1642,7 @@ def data():
                 header=[0, 1],
                 index_col=[0],
             )
-            .loc[
-                "GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"
-            ]
+            .loc["GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"]
             .groupby(level="region")
             .sum()
         )
@@ -1801,9 +1655,7 @@ def data():
                 header=[0, 1],
                 index_col=[0],
             )
-            .loc[
-                "GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"
-            ]
+            .loc["GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"]
             .groupby(level="region")
             .sum()
         )
@@ -1811,9 +1663,7 @@ def data():
 
         df = pd.DataFrame()
         df["pba"] = D_pba + F_hh
-        df["cba"] = (
-            SLY.loc[["CFC", "Government", "Households", "NCF", "NPISHS"]].sum() + F_hh
-        )
+        df["cba"] = SLY.loc[["CFC", "Government", "Households", "NCF", "NPISHS"]].sum() + F_hh
         df["cbaK"] = SLkY.loc[["Government", "Households", "NPISHS"]].sum() + F_hh
         df["cba hh direct"] = SLY.loc["Households"] + F_hh
         df["cbaK hh direct"] = SLkY.loc["Households"] + F_hh
@@ -1848,9 +1698,6 @@ for i in data.swaplevel().unstack().index:
 # pop 2019
 # hh from IPCC
 # ajouter Net capital formation pour calcul noeuds RoW (exemple CN cap 1995)
-
-# app rester éveillée
-# app onglets
 
 
 # # Il faut dire quelque chose de la proportionnalité entre pays
