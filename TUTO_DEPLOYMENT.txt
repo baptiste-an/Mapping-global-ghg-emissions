@@ -1,0 +1,12 @@
+export PATH=$PATH:/C/Program\ Files/scalingo_1.26.0_windows_amd64
+
+echo "export PATH=$PATH:/c/Program\ Files/" >> $HOME/.bashrc
+
+scalingo login --api-token tk-us-gbXaz-E5jTpLzKaQnoqcyrreK0vICYQTpViU6cgoDE1rcnaS
+
+cd C:/Users/andrieba/Documents/GitHub/sankey5/MyApp_0
+
+
+git remote add scalingo git@ssh.osc-fr1.scalingo.com:sankeyghgtest.git
+
+git push scalingo main
