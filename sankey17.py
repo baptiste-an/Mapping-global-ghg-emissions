@@ -23,28 +23,12 @@ pio.kaleido.scope.mathjax = None  # ne sert à rien car mathjax ne fonctionne pa
 pyo.init_notebook_mode()
 
 pathexio = "Data/"  # wherever you have downloaded EXIOBASE data
-impacts = [
-    "GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)",
-    "Carbon dioxide (CO2) CO2EQ IPCC categories 1 to 4 and 6 to 7 (excl land use, land use change and forestry)",
-    "Methane (CH4) CO2EQ IPCC categories 1 to 4 and 6 to 7 (excl land use, land use change and forestry)",
-    "Nitrous Oxide (N2O) CO2EQ IPCC categories 1 to 4 and 6 to 7 (excl land use, land use change and forestry)",
-]
 
 
 plt_rcParams()
 
 
 ##########
-
-
-def norm():
-    regions = pd.read_excel("regions.xlsx")["region"].values
-    df = pd.DataFrame([], columns=[i for i in range(1995, 2020, 1)], index=regions)
-    for year in range(1995, 2020, 1):
-        for region in regions:
-            data_sankey = feather.read_feather("Sankeys/" + region + "/data" + region + str(year) + ".feather")
-            df.loc[region].loc[year] = data_sankey.set_index("position").loc["0. ges"].sum().loc["value"]
-    feather.write_feather(df.div(pd.DataFrame(df.T.max())[0], axis=0), "norm.feather")
 
 
 def verification():
@@ -110,43 +94,6 @@ def verification():
     Ykall.index.names = ["region cons", "sector cons"]
     (Lk.mul(Ykall, axis=1).sum(axis=1) * S_imp).loc["RU"].sum() == D_pba.loc["RU"].sum()
     # pbak verification
-
-
-def pop():
-    pop = (
-        rename_region(
-            pd.read_csv("World Bank/pop.csv", header=[2], index_col=[0])[[str(i) for i in range(1995, 2020, 1)]],
-            level="Country Name",
-        )
-        .drop("Z - Aggregated categories")
-        .rename(
-            dict(
-                zip(
-                    cc.name_shortas("EXIO3")["name_short"].values,
-                    cc.name_shortas("EXIO3")["EXIO3"].values,
-                )
-            )
-        )
-        .groupby(level=0)
-        .sum()
-    )
-    pop.columns = [int(i) for i in pop.columns]
-
-    pop.loc["TW"] = pd.read_excel("pop Taiwan.xls", header=0, index_col=0)["TW"]
-
-    feather.write_feather(pop, "pop.feather")
-
-
-def norm_cap():
-    population = feather.read_feather("pop.feather")
-    regions = pd.read_excel("regions.xlsx")["region"].values
-    df = pd.DataFrame([], columns=[i for i in range(1995, 2020, 1)], index=regions)
-    for year in range(1995, 2020, 1):
-        for region in regions:
-            pop = population[year].loc[region] / 1000
-            data_sankey = feather.read_feather("Sankeys/" + region + "/data" + region + str(year) + ".feather")
-            df.loc[region].loc[year] = data_sankey.set_index("position").loc["0. ges"].sum().loc["value"] / pop
-    feather.write_feather(df.div(pd.DataFrame(df.T.max())[0], axis=0), "norm_cap.feather")
 
 
 #######################################
@@ -1271,6 +1218,31 @@ def data_Sankey(year, region):
 #########################################
 
 
+def pop():
+    pop = (
+        rename_region(
+            pd.read_csv("World Bank/pop.csv", header=[2], index_col=[0])[[str(i) for i in range(1995, 2020, 1)]],
+            level="Country Name",
+        )
+        .drop("Z - Aggregated categories")
+        .rename(
+            dict(
+                zip(
+                    cc.name_shortas("EXIO3")["name_short"].values,
+                    cc.name_shortas("EXIO3")["EXIO3"].values,
+                )
+            )
+        )
+        .groupby(level=0)
+        .sum()
+    )
+    pop.columns = [int(i) for i in pop.columns]
+
+    pop.loc["TW"] = pd.read_excel("pop Taiwan.xls", header=0, index_col=0)["TW"]
+
+    feather.write_feather(pop, "pop.feather")
+
+
 def nodes_data():
     population = feather.read_feather("pop.feather")
     for year in range(1995, 2020, 1):
@@ -1647,6 +1619,31 @@ def Nodes(region, year, height, top_margin, bottom_margin, pad, ratio):
         ]
     ] = 0.77
     return nodes, pad2
+
+
+##########################################
+
+
+def norm():
+    regions = pd.read_excel("regions.xlsx")["region"].values
+    df = pd.DataFrame([], columns=[i for i in range(1995, 2020, 1)], index=regions)
+    for year in range(1995, 2020, 1):
+        for region in regions:
+            data_sankey = feather.read_feather("Sankeys/" + region + "/data" + region + str(year) + ".feather")
+            df.loc[region].loc[year] = data_sankey.set_index("position").loc["0. ges"].sum().loc["value"]
+    feather.write_feather(df.div(pd.DataFrame(df.T.max())[0], axis=0), "norm.feather")
+
+
+def norm_cap():
+    population = feather.read_feather("pop.feather")
+    regions = pd.read_excel("regions.xlsx")["region"].values
+    df = pd.DataFrame([], columns=[i for i in range(1995, 2020, 1)], index=regions)
+    for year in range(1995, 2020, 1):
+        for region in regions:
+            pop = population[year].loc[region] / 1000
+            data_sankey = feather.read_feather("Sankeys/" + region + "/data" + region + str(year) + ".feather")
+            df.loc[region].loc[year] = data_sankey.set_index("position").loc["0. ges"].sum().loc["value"] / pop
+    feather.write_feather(df.div(pd.DataFrame(df.T.max())[0], axis=0), "norm_cap.feather")
 
 
 ##########################################

@@ -3,6 +3,74 @@ import os
 import pandas as pd
 import os
 import pyarrow.feather as feather
+from general_functions import *
+import pymrio
+
+pathexio = "Data/"
+
+
+def Kbar():
+
+    CFC_WB = pd.read_excel("World Bank/CFC worldbank.xlsx", header=3, index_col=[0])[
+        [str(i) for i in range(2015, 2020, 1)]
+    ]
+
+    GFCF_WB = pd.read_excel("World Bank/GFCF worldbank.xlsx", header=3, index_col=[0])[
+        [str(i) for i in range(2015, 2020, 1)]
+    ]
+
+    # we want to set to NaN values for regions that don't have both CFC and GFCF data
+    CFC_WB = CFC_WB * GFCF_WB / GFCF_WB  # in case some countries have data for CFC but not GFCF
+    GFCF_WB = GFCF_WB * CFC_WB / CFC_WB
+
+    CFC_WB = rename_region(CFC_WB, "Country Name").drop("Z - Aggregated categories")
+    # rename the regions to a common format
+    CFC_WB["region"] = cc.convert(names=CFC_WB.index, to="EXIO3")
+    # convert the common format to EXIOBASE format
+    CFC_WB = CFC_WB.reset_index().set_index("region").drop("Country Name", axis=1).groupby(level="region").sum()
+    # define EXIOBASE regions as index
+
+    GFCF_WB = rename_region(GFCF_WB, "Country Name").drop("Z - Aggregated categories")
+    GFCF_WB["region"] = cc.convert(names=GFCF_WB.index, to="EXIO3")
+    GFCF_WB = GFCF_WB.reset_index().set_index("region").drop("Country Name", axis=1).groupby(level="region").sum()
+
+    GFCF_over_CFC_WB = GFCF_WB / CFC_WB
+    GFCF_over_CFC_WB.loc["TW"] = GFCF_over_CFC_WB.loc["CN"]
+    # hypothesis: ratio of GFCF/CFC is same for Taiwan than for China
+
+    Kbar15 = feather.read_feather("Data/Kbar/Kbar_2015.feather")
+
+    # We calculate coefficients for year 2015 that will be multiplied by CFC for year 2017
+    Kbarcoefs = (Kbar15.div(Kbar15.sum(axis=1), axis=0)).stack()  # stacked because we need to access CY later
+
+    # also load Kbar data from 2014 as CY is an outlier for Kbar2015
+    Kbar14 = feather.read_feather("Data/Kbar/Kbar_2014.feather")
+
+    Kbarcoefs["CY"] = Kbar14.div(Kbar14.sum(axis=1), axis=0).stack()["CY"]  # because wrong data for CY in Kbar15
+    Kbarcoefs = Kbarcoefs.unstack()
+
+    for i in range(2016, 2020, 1):
+        GFCF_exio = feather.read_feather(pathexio + "EXIO3/IOT_" + str(i) + "_pxp/Y.feather").swaplevel(axis=1)[
+            "Gross fixed capital formation"
+        ]  # aggregated 49 regions, 1 product
+
+        CFC_exio = pd.read_csv(
+            pathexio + "EXIO3/IOT_" + str(i) + "_pxp/satellite/F.txt",
+            delimiter="\t",
+            header=[0, 1],
+            index_col=[0],
+        ).loc["Operating surplus: Consumption of fixed capital"]
+
+        GFCF_over_CFC_exio = GFCF_exio.sum() / CFC_exio.unstack().sum(axis=1)
+
+        CFC_exio_rescaled = (
+            CFC_exio.unstack().mul(GFCF_over_CFC_exio, axis=0).div(GFCF_over_CFC_WB[str(i)], axis=0).stack()
+        )
+
+        feather.write_feather(
+            Kbarcoefs.mul(CFC_exio_rescaled, axis=0),
+            "Data/Kbar/Kbar_" + str(i) + ".feather",
+        )
 
 
 # function to diaggregate GDP into all the formats needed
@@ -10,7 +78,7 @@ def Y_all():
 
     for i in range(1995, 2020, 1):
         pathIOT = pathexio + "EXIO3/IOT_" + str(i) + "_pxp/"
-        Kbar = feather.read_feather(pathexio + "Kbar/Kbar" + str(i) + ".feather").fillna(0)
+        Kbar = feather.read_feather(pathexio + "Kbar/Kbar_" + str(i) + ".feather").fillna(0)
         Y = feather.read_feather(pathIOT + "Y.feather")
 
         df = pd.DataFrame([], index=Y.stack(level=0).index)
@@ -20,17 +88,32 @@ def Y_all():
             "Final consumption expenditure by non-profit organisations serving households (NPISH)"
         ]
         df["CFC"] = Kbar.groupby(level="region", axis=1).sum().stack()
-        df["NCF"] = (
-            Y.stack(level=0)[
-                [
-                    "Changes in inventories",
-                    "Changes in valuables",
-                    "Exports: Total (fob)",
-                    "Gross fixed capital formation",
+
+        net = pd.DataFrame()
+        for region in Y.stack().columns:
+
+            # pour chauqe pays, on a CFC par secteur
+            cfc = Kbar.loc[region].sum(axis=1)
+            # à comparer avec GFCF du pays
+            gfcf_all = (
+                Y.stack(level=0)[
+                    [
+                        "Changes in inventories",
+                        "Changes in valuables",
+                        "Exports: Total (fob)",
+                        "Gross fixed capital formation",
+                    ]
                 ]
-            ].sum(axis=1)
-            - Kbar.groupby(level="region", axis=1).sum().stack()
-        )
+                .sum(axis=1)
+                .unstack()[region]
+                .unstack()
+            )
+            gfcf_shares = gfcf_all.div(gfcf_all.sum(), axis=1)
+            gfcf = gfcf_all.sum()
+            diff = gfcf - cfc
+            net[region] = gfcf_shares.mul(diff, axis=1).stack()
+
+        df["NCF"] = net.stack()
         df.index.names = ["region prod", "sector prod", "region cons"]
         # en fait devrait etre ["region cons", "sector cons", "region"]
 
@@ -55,7 +138,7 @@ def L_and_Lk():
         pathIOT = pathexio + "EXIO3/IOT_" + str(i) + "_pxp/"
         Y = feather.read_feather(pathIOT + "Y.feather").groupby(level="region", axis=1).sum()
         Z = feather.read_feather(pathIOT + "Z.feather").fillna(0)
-        Kbar = feather.read_feather(pathexio + "Kbar/Kbar" + str(i) + ".feather").fillna(0)
+        Kbar = feather.read_feather(pathexio + "Kbar/Kbar_" + str(i) + ".feather").fillna(0)
 
         Zk = Z + Kbar
         x = Z.sum(axis=1) + Y.sum(axis=1)
