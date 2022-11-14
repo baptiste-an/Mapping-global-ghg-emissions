@@ -119,7 +119,7 @@ def Y_all():
             CFC[region] = gcf_shares.mul(cfc, axis=1).stack()
 
         df["CFC"] = CFC.stack()
-        df["NFC"] = NET.stack()
+        df["NCF"] = NET.stack()
 
         # df["NCF"] = Y.stack(level=0)[
         #             [

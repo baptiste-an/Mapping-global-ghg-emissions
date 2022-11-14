@@ -158,7 +158,7 @@ def data():
 
         F_hh = (
             pd.read_csv(
-                pathexio + "EXIO3/IOT_" + str(i) + "_pxp/impacts/F_hh.txt",
+                pathexio + "EXIO3/IOT_" + str(i) + "_pxp/impacts/F_Y.txt",
                 delimiter="\t",
                 header=[0, 1],
                 index_col=[0],
