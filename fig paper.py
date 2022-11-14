@@ -110,7 +110,7 @@ def data_table():
     return data
 
 
-data_table = feather.read_feather("data_table.feather").unstack(level=0) / 1000
+data_t = feather.read_feather("data_table.feather").unstack(level=0) / 1000
 
 
 def data():

@@ -87,15 +87,18 @@ def Y_all():
         df["NPISHS"] = Y.stack(level=0)[
             "Final consumption expenditure by non-profit organisations serving households (NPISH)"
         ]
-        df["CFC"] = Kbar.groupby(level="region", axis=1).sum().stack()
+        # df["CFC"] = Kbar.groupby(level="region", axis=1).sum().stack()
 
-        net = pd.DataFrame()
+        NET = pd.DataFrame(index=df.unstack().index)
+        CFC = pd.DataFrame(index=df.unstack().index)
         for region in Y.stack().columns:
 
             # pour chauqe pays, on a CFC par secteur
-            cfc = Kbar.loc[region].sum(axis=1)
-            # à comparer avec GFCF du pays
-            gfcf_all = (
+            cfc = Kbar.loc[region].sum(
+                axis=1
+            )  # peu importe qui "achète" le cfc de cette région, ce qui compte c'est à qui elle l'achète
+            # à comparer avec GCF du pays
+            gcf_all = (
                 Y.stack(level=0)[
                     [
                         "Changes in inventories",
@@ -108,12 +111,24 @@ def Y_all():
                 .unstack()[region]
                 .unstack()
             )
-            gfcf_shares = gfcf_all.div(gfcf_all.sum(), axis=1)
-            gfcf = gfcf_all.sum()
-            diff = gfcf - cfc
-            net[region] = gfcf_shares.mul(diff, axis=1).stack()
+            gcf_shares = gcf_all.div(gcf_all.sum(), axis=1)
+            # gcf_shares.loc[region,gcf_shares.isnull().all()]=1
+            gcf = gcf_all.sum()
+            diff = gcf - cfc
+            NET[region] = gcf_shares.mul(diff, axis=1).stack()
+            CFC[region] = gcf_shares.mul(cfc, axis=1).stack()
 
-        df["NCF"] = net.stack()
+        df["CFC"] = CFC.stack()
+        df["NFC"] = NET.stack()
+
+        # df["NCF"] = Y.stack(level=0)[
+        #             [
+        #                 "Changes in inventories",
+        #                 "Changes in valuables",
+        #                 "Exports: Total (fob)",
+        #                 "Gross fixed capital formation",
+        #             ]
+        #         ].sum(axis=1) - df["CFC"]
         df.index.names = ["region prod", "sector prod", "region cons"]
         # en fait devrait etre ["region cons", "sector cons", "region"]
 
@@ -276,7 +291,7 @@ def F_hh():
     for year in range(1995, 2020, 1):
         F_hh_imp = (
             pd.read_csv(
-                pathexio + "EXIO3/IOT_" + str(year) + "_pxp/impacts/F_hh.txt",
+                pathexio + "EXIO3/IOT_" + str(year) + "_pxp/impacts/F_Y.txt",
                 delimiter="\t",
                 header=[0, 1],
                 index_col=[0],

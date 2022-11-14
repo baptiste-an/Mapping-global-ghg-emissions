@@ -1176,8 +1176,7 @@ def imports_reexported(data_sankey, region, node_dict, data, color_dict):
 
 
 def data_Sankey(year, region):
-    pathexio = "C:/Users/andrieba/Documents/Data/"
-    pathIOT = pathexio + "EXIO3/IOT_" + str(year) + "_pxp/"
+
     SLY = feather.read_feather("SLY/" + region + "/" + str(year) + ".feather") / 1000
 
     DictRoW, left_index, right_index, position_all, node_list, color_dict = variables(region)
