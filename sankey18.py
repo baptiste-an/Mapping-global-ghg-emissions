@@ -1161,7 +1161,49 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
             ]
         )
     except KeyError:
-        None
+        try:
+            df = (
+                data.xs("infRegFromRoW", level="LY name").groupby(level="sector prod").sum()["value"]
+                + data["value"]
+                .unstack(level="LY name")[
+                    [
+                        "LY GCF",
+                    ]
+                ]
+                .sum(axis=1)
+                .unstack(level="region cons")
+                .groupby(level="sector prod")
+                .sum()
+                .drop(region, axis=1)
+                .sum(axis=1)
+                - data["value"]
+                .unstack(level="LY name")[["LY NCF sup"]]
+                .sum(axis=1)
+                .unstack(level="region cons")
+                .groupby(level="sector prod")
+                .sum()
+                .drop(region, axis=1)
+                .sum(axis=1)
+            ) - data.xs("CFC<(Lk-L)Y", level="LY name").xs(region, level="region cons").groupby(level="sector prod").sum()[
+                "value"
+            ]
+            data_sankey2 = pd.concat(
+                [
+                    data_sankey2,
+                    pd.DataFrame(
+                        [
+                            [node_dict["RoW - CFC"]] * len(df),
+                            [node_dict["RoW - CFCk"]] * len(df),
+                            df.values,
+                            [color_dict[i] for i in df.index.values],
+                            ["5. ncf"] * len(df),
+                        ],
+                        index=["source", "target", "value", "color", "position"],
+                    ).T,
+                ]
+            )
+        except KeyError:
+            None
 
     # CFC to RoW - CFCk
 
