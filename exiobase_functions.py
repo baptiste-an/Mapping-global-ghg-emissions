@@ -5,6 +5,7 @@ import os
 import pyarrow.feather as feather
 from general_functions import *
 import pymrio
+import numpy as np
 
 pathexio = "Data/"
 
@@ -41,15 +42,17 @@ def Kbar():
     Kbar15 = feather.read_feather("Data/Kbar/Kbar_2015.feather")
 
     # We calculate coefficients for year 2015 that will be multiplied by CFC for year 2017
-    Kbarcoefs = (Kbar15.div(Kbar15.sum(axis=1), axis=0)).stack()  # stacked because we need to access CY later
-
-    # also load Kbar data from 2014 as CY is an outlier for Kbar2015
-    Kbar14 = feather.read_feather("Data/Kbar/Kbar_2014.feather")
-
-    Kbarcoefs["CY"] = Kbar14.div(Kbar14.sum(axis=1), axis=0).stack()["CY"]  # because wrong data for CY in Kbar15
-    Kbarcoefs = Kbarcoefs.unstack()
+    Kbarcoefs = Kbar15.div(Kbar15.sum(axis=1), axis=0)
 
     for i in range(2016, 2020, 1):
+        pathIOT = pathexio + "EXIO3/IOT_" + str(i) + "_pxp/"
+        Z = feather.read_feather(pathIOT + "Z.feather").fillna(0)
+        Zcoefs = Z.div(Z.sum(axis=1), axis=0)
+
+        Kbarcoefsyear = Kbarcoefs.combine_first(Zcoefs).combine_first(
+            pd.DataFrame(np.identity(9800), index=Z.index, columns=Z.columns)
+        )
+
         GFCF_exio = feather.read_feather(pathexio + "EXIO3/IOT_" + str(i) + "_pxp/Y.feather").swaplevel(axis=1)[
             "Gross fixed capital formation"
         ]  # aggregated 49 regions, 1 product
@@ -68,7 +71,7 @@ def Kbar():
         )
 
         feather.write_feather(
-            Kbarcoefs.mul(CFC_exio_rescaled, axis=0),
+            Kbarcoefsyear.mul(CFC_exio_rescaled, axis=0),
             "Data/Kbar/Kbar_" + str(i) + ".feather",
         )
 
@@ -112,7 +115,7 @@ def Y_all():
                 .unstack()
             )
             gcf_shares = gcf_all.div(gcf_all.sum(), axis=1)
-            # gcf_shares.loc[region,gcf_shares.isnull().all()]=1
+            gcf_shares.loc[region, gcf_shares.isnull().all()] = 1
             gcf = gcf_all.sum()
             diff = gcf - cfc
             NET[region] = gcf_shares.mul(diff, axis=1).stack()
@@ -155,7 +158,9 @@ def L_and_Lk():
         Z = feather.read_feather(pathIOT + "Z.feather").fillna(0)
         Kbar = feather.read_feather(pathexio + "Kbar/Kbar_" + str(i) + ".feather").fillna(0)
 
-        Zk = Z + Kbar
+        Zk = pd.DataFrame(
+            Z + Kbar, index=Z.index, columns=Z.columns
+        )  # EXTREMELY important to reindex, otherwise pymrio.calc_L doesn't work properly
         x = Z.sum(axis=1) + Y.sum(axis=1)
         Ak = pymrio.calc_A(Zk, x)
         feather.write_feather(pymrio.calc_L(Ak), pathIOT + "Lk.feather")

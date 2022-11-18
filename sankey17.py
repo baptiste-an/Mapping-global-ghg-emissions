@@ -197,10 +197,80 @@ def data_from_SLY(SLY, region):
     SLY["SF6"] = SLY["GHG"] / 1000000 - SLY[["CO2", "CH4", "N2O"]].sum(axis=1)
 
     SLY = SLY.drop("GHG", axis=1).stack().unstack(level=0)
+    SLY["LY GCF"] = SLY["LY CFC"].fillna(0) + SLY["LY NCF"].fillna(0)
+
+    SLY = (
+        SLY.drop(["LY NCF", "LkY NCF"], axis=1)
+        .append(
+            SLY.loc[[region]]
+            .rename(
+                index=dict(
+                    {
+                        "Africa": "otherreg",
+                        "Asia": "otherreg",
+                        "Europe": "otherreg",
+                        "Middle East": "otherreg",
+                        "North America": "otherreg",
+                        "Oceania": "otherreg",
+                        "South America": "otherreg",
+                        "150100:MACHINERY AND EQUIPMENT": "othercap",
+                        "150200:CONSTRUCTION": "othercap",
+                        "150300:OTHER PRODUCTS": "othercap",
+                        "Households direct emissions": "other",
+                        "Mobility": "othersect",
+                        "Shelter": "othersect",
+                        "Food": "othersect",
+                        "Clothing": "othersect",
+                        "Education": "othersect",
+                        "Health": "othersect",
+                        "Other goods and services": "othersect",
+                        "CH4": "othergas",
+                        "CO2": "othergas",
+                        "N2O": "othergas",
+                        "SF6": "othergas",
+                    }
+                )
+            )[["LY NCF", "LkY NCF"]]
+            .groupby(level=SLY.index.names)
+            .sum()
+        )
+        .append(
+            SLY.drop(region)
+            .rename(
+                index=dict(
+                    {
+                        # "Africa": "otherreg",
+                        # "Asia": "otherreg",
+                        # "Europe": "otherreg",
+                        # "Middle East": "otherreg",
+                        # "North America": "otherreg",
+                        # "Oceania": "otherreg",
+                        # "South America": "otherreg",
+                        "150100:MACHINERY AND EQUIPMENT": "othercap",
+                        "150200:CONSTRUCTION": "othercap",
+                        "150300:OTHER PRODUCTS": "othercap",
+                        "Households direct emissions": "other",
+                        # "Mobility": "othersect",
+                        # "Shelter": "othersect",
+                        # "Food": "othersect",
+                        # "Clothing": "othersect",
+                        # "Education": "othersect",
+                        # "Health": "othersect",
+                        # "Other goods and services": "othersect",
+                        "CH4": "othergas",
+                        "CO2": "othergas",
+                        "N2O": "othergas",
+                        "SF6": "othergas",
+                    }
+                )
+            )[["LY NCF", "LkY NCF"]]
+            .groupby(level=SLY.index.names)
+            .sum()
+        )
+    )
 
     SLY["LY NCF sup"] = SLY["LY NCF"][SLY["LY NCF"] > 0]
     SLY["LY NCF inf"] = -SLY["LY NCF"][SLY["LY NCF"] < 0]
-    SLY["LY GCF"] = SLY["LY CFC"].fillna(0) + SLY["LY NCF sup"].fillna(0) - SLY["LY NCF inf"].fillna(0)
 
     SLY["LkY NCF sup"] = SLY["LkY NCF"][SLY["LkY NCF"] > 0]
     SLY["LkY NCF inf"] = -SLY["LkY NCF"][SLY["LkY NCF"] < 0]
@@ -586,10 +656,11 @@ def level_8(region, data, DictRoW, right_index):
                 "150100:MACHINERY AND EQUIPMENT",
                 "150200:CONSTRUCTION",
                 "150300:OTHER PRODUCTS",
+                "othercap",
                 "RoW - 150100:MACHINERY AND EQUIPMENT",
                 "RoW - 150200:CONSTRUCTION",
                 "RoW - 150300:OTHER PRODUCTS",
-                "None",
+                "RoW - othercap" "None",
                 "RoW - None",
             ],
             np.nan,
@@ -756,12 +827,23 @@ def junction_4_to_5(data_sankey, region, data, node_dict, color_dict):
     # RoW - GCF to RoW - NCF pos (Exports)
 
     # (GCF-NCF sup) to CFC
+    ind = [
+        "Agriculture-food",
+        "Energy industry",
+        "Heavy industry",
+        "Manufacturing industry",
+        "Services",
+        "Transport services",
+    ]
     df = (
-        data.xs("LY GCF", level="LY name").xs(region, level="region cons").groupby(level="sector prod").sum()["value"]
-        - data.xs("LY NCF sup", level="LY name")
-        .xs(region, level="region cons")
-        .groupby(level="sector prod")
-        .sum()["value"]
+        pd.DataFrame(
+            data.xs("LY GCF", level="LY name").xs(region, level="region cons").groupby(level="sector prod").sum(),
+            index=ind,
+        ).fillna(0)["value"]
+        - pd.DataFrame(
+            data.xs("LY NCF sup", level="LY name").xs(region, level="region cons").groupby(level="sector prod").sum(),
+            index=ind,
+        ).fillna(0)["value"]
     )
     data_sankey2 = pd.concat(
         [
@@ -781,20 +863,26 @@ def junction_4_to_5(data_sankey, region, data, node_dict, color_dict):
 
     # (RoW-GCF - RoW-NCFsup) to RoW - CFC
     df = (
-        data.xs("LY GCF", level="LY name")
-        .unstack(level="region cons")
-        .swaplevel(axis=1)
-        .drop(region, axis=1)
-        .stack(level=0)
-        .groupby(level="sector prod")
-        .sum()["value"]
-        - data.xs("LY NCF sup", level="LY name")
-        .unstack(level="region cons")
-        .swaplevel(axis=1)
-        .drop(region, axis=1)
-        .stack(level=0)
-        .groupby(level="sector prod")
-        .sum()["value"]
+        pd.DataFrame(
+            data.xs("LY GCF", level="LY name")
+            .unstack(level="region cons")
+            .swaplevel(axis=1)
+            .drop(region, axis=1)
+            .stack(level=0)
+            .groupby(level="sector prod")
+            .sum(),
+            index=ind,
+        )["value"]
+        - pd.DataFrame(
+            data.xs("LY NCF sup", level="LY name")
+            .unstack(level="region cons")
+            .swaplevel(axis=1)
+            .drop(region, axis=1)
+            .stack(level=0)
+            .groupby(level="sector prod")
+            .sum(),
+            index=ind,
+        )["value"]
     )
     data_sankey2 = pd.concat(
         [
@@ -1200,7 +1288,15 @@ def data_Sankey(year, region):
 
     for j in position_all:
         node_list.extend(list(dict.fromkeys(data.reset_index()[j])))
-    node_list = [x for x in node_list if str(x) != "nan"]
+    node_list = [
+        x
+        for x in node_list
+        if str(x) != "nan"
+        and str(x) != "otherreg"
+        and str(x) != "othercap"
+        and str(x) != "othersect"
+        and str(x) != "othergas"
+    ]
     node_dict = dict(zip(node_list, list(range(0, len(node_list), 1))))
 
     data_sankey = pd.DataFrame()
@@ -1715,7 +1811,7 @@ def fig_sankey(region, year):
     )
 
     # fig.update_traces(textfont_size=7)
-    fig.write_image("Sankeys/" + region + "/fig2" + region + str(year) + ".pdf", engine="orca")
+    # fig.write_image("Sankeys/" + region + "/fig2" + region + str(year) + ".pdf", engine="orca")
     # # fig.write_image("SankeyFR" + str(year) + ".svg", engine="orca")
 
     fig.show()
