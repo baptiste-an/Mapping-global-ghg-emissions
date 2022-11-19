@@ -1081,6 +1081,14 @@ def junction_4_to_5(data_sankey, region, data, node_dict, color_dict):
 
 
 def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
+    ind = [
+        "Agriculture-food",
+        "Energy industry",
+        "Heavy industry",
+        "Manufacturing industry",
+        "Services",
+        "Transport services",
+    ]
     data_sankey2 = data_sankey
 
     # CFC to CFCk !!!
@@ -1265,66 +1273,35 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
 
     try:
         df = (
-            CFCtoRoWCFCk
-            + RoWCFCtoRoWCFCk
-            - data["value"]
-            .unstack(level="LY name")[["(Lk-L)Y Government", "(Lk-L)Y Households", "(Lk-L)Y NCF sup", "(Lk-L)Y NPISHS"]]
-            .sum(axis=1)
-            .drop(region, level="region cons")
-            .groupby(level="sector prod")
-            .sum()
+            pd.DataFrame(CFCtoRoWCFCk[CFCtoRoWCFCk > 0], index=ind)[0].fillna(0)
+            + pd.DataFrame(RoWCFCtoRoWCFCk[RoWCFCtoRoWCFCk > 0], index=ind)["value"].fillna(0)
+            - pd.DataFrame(
+                data.reset_index()
+                .set_index(["7. cbaK", "6. endo", "sector prod"])
+                .loc["Exports"]
+                .loc["RoW - CFCk"]["value"]
+                .groupby(level="sector prod")
+                .sum(),
+                index=ind,
+            )["value"].fillna(0)
         )
-        data_sankey2 = pd.concat(
-            [
-                data_sankey2,
-                pd.DataFrame(
-                    [
-                        [node_dict["RoW - CFCk"]] * len(df),
-                        [node_dict["CFC imports re-exported"]] * len(df),
-                        df.values,
-                        [color_dict[i] for i in df.index.values],
-                        ["6. endo"] * len(df),
-                    ],
-                    index=["source", "target", "value", "color", "position"],
-                ).T,
-            ]
-        )
-    except KeyError:
-        None
-
-    return data_sankey2
-
-
-def imports_reexported(data_sankey, region, node_dict, data, color_dict):
-
-    # CFC to RoW CFCk
-    # + RoW CFC to RoW CFCk
-    # - RoW CFCk to exports
-
-    data_sankey2 = data_sankey
-
-    try:
-        df = (
-            data.xs("CFC>(Lk-L)Y", level="LY name")
-            .drop(region, level="region cons")
-            .groupby(level="sector prod")
-            .sum()["value"]
-        )
-        data_sankey2 = pd.concat(
-            [
-                data_sankey2,
-                pd.DataFrame(
-                    [
-                        [node_dict["RoW - CFCk"]] * len(df),
-                        [node_dict["CFC imports re-exported"]] * len(df),
-                        df.values,
-                        [color_dict[i] for i in df.index.values],
-                        ["6. endo"] * len(df),
-                    ],
-                    index=["source", "target", "value", "color", "position"],
-                ).T,
-            ]
-        )
+        if df.sum() > 0:
+            df = df[df > 0] * df.sum() / df[df > 0].sum()
+            data_sankey2 = pd.concat(
+                [
+                    data_sankey2,
+                    pd.DataFrame(
+                        [
+                            [node_dict["RoW - CFCk"]] * len(df),
+                            [node_dict["CFC imports re-exported"]] * len(df),
+                            df.values,
+                            [color_dict[i] for i in df.index.values],
+                            ["6. endo"] * len(df),
+                        ],
+                        index=["source", "target", "value", "color", "position"],
+                    ).T,
+                ]
+            )
     except KeyError:
         None
 
@@ -1373,7 +1350,6 @@ def data_Sankey(year, region):
     # junctions
     data_sankey = junction_4_to_5(data_sankey, region, data, node_dict, color_dict)
     data_sankey = junction_5_to_6(data_sankey, region, data, node_dict, color_dict)
-    data_sankey = imports_reexported(data_sankey, region, node_dict, data, color_dict)
 
     return node_dict, node_list, data_sankey
 
