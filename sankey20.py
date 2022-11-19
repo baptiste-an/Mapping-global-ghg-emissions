@@ -1143,7 +1143,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         except KeyError:
             None
 
-    # CFC to CFCk = CFCk - RoW CFC to CFCk - imports re exported
+    # CFC to CFCk = CFCk - RoW CFC to CFCk
 
     try:
         CFCtoCFCk = (
@@ -1154,10 +1154,10 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
             .groupby(level="sector prod")
             .sum()
             - RoWCFCtoCFCk
-            - data.xs("CFC>(Lk-L)Y", level="LY name")
-            .drop(region, level="region cons")
-            .groupby(level="sector prod")
-            .sum()["value"]
+            # - data.xs("CFC>(Lk-L)Y", level="LY name")
+            # .drop(region, level="region cons")
+            # .groupby(level="sector prod")
+            # .sum()["value"]
         )
         data_sankey2 = pd.concat(
             [
@@ -1175,35 +1175,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
             ]
         )
     except KeyError:
-        try:
-            CFCtoCFCk = (
-                data["value"]
-                .unstack(level="LY name")[
-                    ["(Lk-L)Y Government", "(Lk-L)Y Households", "(Lk-L)Y NCF sup", "(Lk-L)Y NPISHS"]
-                ]
-                .sum(axis=1)
-                .xs(region, level="region cons")
-                .groupby(level="sector prod")
-                .sum()
-                - RoWCFCtoCFCk
-            )
-            data_sankey2 = pd.concat(
-                [
-                    data_sankey2,
-                    pd.DataFrame(
-                        [
-                            [node_dict["CFC"]] * len(CFCtoCFCk),
-                            [node_dict["CFCk"]] * len(CFCtoCFCk),
-                            CFCtoCFCk.values,
-                            [color_dict[i] for i in CFCtoCFCk.index.values],
-                            ["5. ncf"] * len(CFCtoCFCk),
-                        ],
-                        index=["source", "target", "value", "color", "position"],
-                    ).T,
-                ]
-            )
-        except KeyError:
-            None
+        None
 
     # CFC to RoW - CFCk = CFC - (CFC to CFCk)
 
@@ -1288,6 +1260,37 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
             )
         except KeyError:
             None
+
+    # imports re exported, CFCtoRoWCFCk + RoWCFCtoRoWCFCk - RoWCFCk
+
+    try:
+        df = (
+            CFCtoRoWCFCk
+            + RoWCFCtoRoWCFCk
+            - data["value"]
+            .unstack(level="LY name")[["(Lk-L)Y Government", "(Lk-L)Y Households", "(Lk-L)Y NCF sup", "(Lk-L)Y NPISHS"]]
+            .sum(axis=1)
+            .drop(region, level="region cons")
+            .groupby(level="sector prod")
+            .sum()
+        )
+        data_sankey2 = pd.concat(
+            [
+                data_sankey2,
+                pd.DataFrame(
+                    [
+                        [node_dict["RoW - CFCk"]] * len(df),
+                        [node_dict["CFC imports re-exported"]] * len(df),
+                        df.values,
+                        [color_dict[i] for i in df.index.values],
+                        ["6. endo"] * len(df),
+                    ],
+                    index=["source", "target", "value", "color", "position"],
+                ).T,
+            ]
+        )
+    except KeyError:
+        None
 
     return data_sankey2
 
