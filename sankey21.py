@@ -1334,6 +1334,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         )
         if importsreexp.sum() > 0:
             importsreexp = importsreexp[importsreexp > 0] * importsreexp.sum() / importsreexp[importsreexp > 0].sum()
+            data_sankey2 = concat(data_sankey2, importsreexp, "RoW - CFCk", "CFC imports re-exported")
     except KeyError:
         None
 
@@ -1356,10 +1357,6 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     data_sankey2 = concat(data_sankey2, CFCtoRoWCFCk, "CFC", "RoW - CFCk")
 
     data_sankey2 = concat(data_sankey2, RoWCFCtoRoWCFCk, "RoW - CFC", "RoW - CFCk")
-    try:
-        data_sankey2 = concat(data_sankey2, importsreexp, "RoW - CFCk", "CFC imports re-exported")
-    except NameError:
-        None
 
     return data_sankey2
 
