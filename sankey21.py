@@ -1095,6 +1095,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         GCFtoCFC,
         RoWGCFtoRoWCFC,
         NegCFtoCFC1,
+        NegCFtoCFC2,
         RoWNegCFtoRoWCFC1,
         RoWNegCFtoRoWCFC2,
         GCFtoNCFsup,
@@ -1104,7 +1105,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         CFCtoRoWCFCk,
         RoWCFCtoRoWCFCk,
         importsreexp,
-    ) = [pd.DataFrame()] * 12
+    ) = [pd.DataFrame()] * 13
     data_sankey2 = data_sankey
 
     def reindex(df):
@@ -1265,34 +1266,11 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
 
     # CFC to RoW - CFCk = CFC - (CFC to CFCk)
 
-    CFCtoRoWCFCk = reindex(
-        reindex(
-            data["value"]
-            .unstack(level="LY name")[["LY CFC"]]
-            .sum(axis=1)
-            .xs(region, level="region cons")
-            .groupby(level="sector prod")
-            .sum()
-        )
-    ) - reindex(CFCtoCFCk)
-    try:
-        CFCtoRoWCFCk += reindex(
-            data.xs("(Lk-L)Y NCF inf", level="LY name")
-            .xs(region, level="region cons")
-            .groupby(level="sector prod")
-            .sum()["value"]
-        )
-    except KeyError:
-        None
-    try:
-        CFCtoRoWCFCk += reindex(
-            data.xs("LY NCF inf", level="LY name")
-            .xs(region, level="region cons")
-            .groupby(level="sector prod")
-            .sum()["value"]
-        )
-    except KeyError:
-        None
+    CFCtoRoWCFCk = reindex(GCFtoCFC) - reindex(CFCtoCFCk)
+    if len(NegCFtoCFC1) > 0:
+        CFCtoRoWCFCk += reindex(NegCFtoCFC1)
+    if len(NegCFtoCFC2) > 0:
+        CFCtoRoWCFCk += reindex(NegCFtoCFC2)
 
     # RoWCFCtoRoWCFCk : RoWCFC + infRegFromRoW - RoWCFCtoCFCk
 
@@ -1306,30 +1284,10 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         )
         - RoWCFCtoCFCk
     )
-    try:
-        RoWCFCtoRoWCFCk += reindex(
-            data.xs("LY NCF inf", level="LY name")
-            .unstack(level="region cons")
-            .swaplevel(axis=1)
-            .drop(region, axis=1)
-            .stack(level=0)
-            .groupby(level="sector prod")
-            .sum()["value"]
-        )
-    except KeyError:
-        None
-    try:
-        RoWCFCtoRoWCFCk += reindex(
-            data.xs("(Lk-L)Y NCF inf", level="LY name")
-            .unstack(level="region cons")
-            .swaplevel(axis=1)
-            .drop(region, axis=1)
-            .stack(level=0)
-            .groupby(level="sector prod")
-            .sum()["value"]
-        )
-    except KeyError:
-        None
+    if len(RoWNegCFtoRoWCFC1) > 0:
+        RoWCFCtoRoWCFCk += reindex(RoWNegCFtoRoWCFC1)
+    if len(RoWNegCFtoRoWCFC2) > 0:
+        RoWCFCtoRoWCFCk += reindex(RoWNegCFtoRoWCFC2)
     try:
         RoWCFCtoRoWCFCk += reindex(
             data.xs("infRegFromRoW", level="LY name").groupby(level="sector prod").sum()["value"]
