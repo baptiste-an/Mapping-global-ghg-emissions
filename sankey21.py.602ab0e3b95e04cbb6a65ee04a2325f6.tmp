@@ -1260,6 +1260,8 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         .groupby(level="sector prod")
         .sum()
     ) - reindex(RoWCFCtoCFCk)
+    if abs(CFCtoCFCk).sum()>CFCtoCFCk.sum():
+        CFCtoCFCk = abs(CFCtoCFCk)*CFCtoCFCk.sum()/abs(CFCtoCFCk).sum()
 
     # CFC to RoW - CFCk = CFC - (CFC to CFCk)
 
