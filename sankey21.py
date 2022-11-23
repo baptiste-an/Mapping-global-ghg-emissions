@@ -1162,7 +1162,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
 
     ###
     try:
-        NegCFtoCFC1 = (
+        NegCFtoCFC1 = reindex(
             data.xs("LY NCF inf", level="LY name")
             .xs(region, level="region cons")
             .groupby(level="sector prod")
@@ -1171,7 +1171,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     except KeyError:
         None
     try:
-        NegCFtoCFC2 = (
+        NegCFtoCFC2 = reindex(
             data.xs("(Lk-L)Y NCF inf", level="LY name")
             .xs(region, level="region cons")
             .groupby(level="sector prod")
@@ -1182,7 +1182,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
 
     ###
     try:
-        RoWNegCFtoRoWCFC1 = (
+        RoWNegCFtoRoWCFC1 = reindex(
             data.xs("LY NCF inf", level="LY name")
             .unstack(level="region cons")
             .swaplevel(axis=1)
@@ -1194,7 +1194,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     except KeyError:
         None
     try:
-        RoWNegCFtoRoWCFC2 = (
+        RoWNegCFtoRoWCFC2 = reindex(
             data.xs("(Lk-L)Y NCF inf", level="LY name")
             .unstack(level="region cons")
             .swaplevel(axis=1)
@@ -1209,7 +1209,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     ###
 
     try:
-        GCFtoNCFsup = (
+        GCFtoNCFsup = reindex(
             data.xs("LY NCF sup", level="LY name")
             .xs(region, level="region cons")
             .groupby(level="sector prod")
@@ -1221,7 +1221,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     ###
 
     try:
-        RoWGCFtoExports = (
+        RoWGCFtoExports = reindex(
             data.xs("LY NCF sup", level="LY name")
             .unstack(level="region cons")
             .swaplevel(axis=1)
