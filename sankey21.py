@@ -1474,6 +1474,8 @@ def nodes_data():
                             nodes["position"].loc[node] = "4. cba"
                         elif type(a) == str:
                             nodes["position"].loc[node] = a
+                        elif node in ["GCF", "RoW - GCF"]:
+                            nodes["position"].loc[node] = "4. cba"
                         else:
                             nodes["position"].loc[node] = a.values[0]
 
@@ -1489,8 +1491,7 @@ def nodes_data():
                             "South America",
                         ]:
                             nodes["position"].loc[node] = "9. exp"
-                        elif node in ["GCF", "RoW - GCF"]:
-                            nodes["position"].loc[node] = "4. cba"
+
                         elif node in ["CFC", "RoW - CFC"]:
                             nodes["position"].loc[node] = "5. ncf"
                         elif node in ["CFCk", "RoW - CFCk"]:
