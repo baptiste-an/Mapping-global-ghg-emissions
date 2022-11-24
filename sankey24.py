@@ -409,7 +409,14 @@ def data_from_SLY(SLY, region):
         df2 = df2.set_index(data.index.names)
         df2.columns = ["value"]
         df2 = df2.groupby(level=df2.index.names).sum()
-        df2.drop(region, level="region prod") * df2.sum() / df2.xs("WE", level="region prod").sum()
+        if df2.xs(region, level="region prod").sum().value < 0:
+            df2 = df2.drop(region, level="region prod") * df2.sum() / df2.xs(region, level="region prod").sum()
+        else:
+            df2 = (
+                df2.drop(region, level="region prod")
+                * df2.sum()
+                / (df2.sum() - df2.xs(region, level="region prod").sum())
+            )
         data = pd.concat(
             [
                 -df2,
