@@ -960,13 +960,15 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         )
         RoWNegCFtoRoWCFC1 = to_abs(RoWNegCFtoRoWCFC1)
     except KeyError:
-        try:
-            RoWNegCFtoRoWCFC1 = reindex(
-                data.xs("LY NCF inf", level="LY name").groupby(level="sector prod").sum()["value"]
-            )
-            RoWNegCFtoRoWCFC1 = to_abs(RoWNegCFtoRoWCFC1)
-        except KeyError:
-            None
+        if region not in data.xs("LY NCF inf", level="LY name").stack().unstack(level="region cons").columns:
+            try:
+                RoWNegCFtoRoWCFC1 = reindex(
+                    data.xs("LY NCF inf", level="LY name").groupby(level="sector prod").sum()["value"]
+                )
+                RoWNegCFtoRoWCFC1 = to_abs(RoWNegCFtoRoWCFC1)
+            except KeyError:
+                None
+
     try:
         RoWNegCFtoRoWCFC2 = reindex(
             data.xs("(Lk-L)Y NCF inf", level="LY name")
@@ -979,13 +981,14 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         )
         RoWNegCFtoRoWCFC2 = to_abs(RoWNegCFtoRoWCFC2)
     except KeyError:
-        try:
-            RoWNegCFtoRoWCFC2 = reindex(
-                data.xs("(Lk-L)Y NCF inf", level="LY name").groupby(level="sector prod").sum()["value"]
-            )
-            RoWNegCFtoRoWCFC2 = to_abs(RoWNegCFtoRoWCFC2)
-        except KeyError:
-            None
+        if region not in data.xs("(Lk-L)Y NCF inf", level="LY name").stack().unstack(level="region cons").columns:
+            try:
+                RoWNegCFtoRoWCFC2 = reindex(
+                    data.xs("(Lk-L)Y NCF inf", level="LY name").groupby(level="sector prod").sum()["value"]
+                )
+                RoWNegCFtoRoWCFC2 = to_abs(RoWNegCFtoRoWCFC2)
+            except KeyError:
+                None
 
     ###
 
@@ -1163,13 +1166,19 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
 
     data_sankey2 = concat(data_sankey2, GCFtoCFC, "GCF", "CFC")
     data_sankey2 = concat(data_sankey2, RoWGCFtoRoWCFC, "RoW - GCF", "RoW - CFC")
-    if len(NegCFtoCFC1) > 0:
+    if len(NegCFtoCFC1) > 0 and len(NegCFtoCFC2):
+        data_sankey2 = concat(data_sankey2, NegCFtoCFC1 + NegCFtoCFC2, "Negative capital formation", "CFC")
+    elif len(NegCFtoCFC1) > 0:
         data_sankey2 = concat(data_sankey2, NegCFtoCFC1, "Negative capital formation", "CFC")
-    if len(NegCFtoCFC2) > 0:
+    elif len(NegCFtoCFC2) > 0:
         data_sankey2 = concat(data_sankey2, NegCFtoCFC2, "Negative capital formation", "CFC")
-    if len(RoWNegCFtoRoWCFC1) > 0:
+    if len(RoWNegCFtoRoWCFC1) > 0 and len(RoWNegCFtoRoWCFC2) > 0:
+        data_sankey2 = concat(
+            data_sankey2, RoWNegCFtoRoWCFC1 + RoWNegCFtoRoWCFC2, "RoW - Negative capital formation", "RoW - CFC"
+        )
+    elif len(RoWNegCFtoRoWCFC1) > 0:
         data_sankey2 = concat(data_sankey2, RoWNegCFtoRoWCFC1, "RoW - Negative capital formation", "RoW - CFC")
-    if len(RoWNegCFtoRoWCFC2) > 0:
+    elif len(RoWNegCFtoRoWCFC2) > 0:
         data_sankey2 = concat(data_sankey2, RoWNegCFtoRoWCFC2, "RoW - Negative capital formation", "RoW - CFC")
     if len(GCFtoNCFsup) > 0:
         data_sankey2 = concat(data_sankey2, GCFtoNCFsup, "GCF", "Net capital formation ")
