@@ -887,8 +887,9 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
 
     def to_abs(df):
         if df.sum() > 0:
-            df = reindex(df[df > 0] * df.sum() / df[df > 0].sum())
-        return df
+            return reindex(df[df > 0] * df.sum() / df[df > 0].sum())
+        else:
+            return reindex(df[df < 0] * df.sum() / df[df < 0].sum())
 
     # junction 1
 
@@ -1035,6 +1036,8 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         CFCtoCFCk = abs(CFCtoCFCk) * CFCtoCFCk.sum() / abs(CFCtoCFCk).sum()
     CFCtoCFCk = to_abs(CFCtoCFCk)
 
+    ###
+
     # CFC to RoW - CFCk = CFC - (CFC to CFCk)
 
     CFCtoRoWCFCk = reindex(GCFtoCFC) - reindex(CFCtoCFCk)
@@ -1107,6 +1110,13 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     if test.sum() < 0:
         RoWCFCtoRoWCFCk += test
         RoWCFCtoRoWCFCk = to_abs(RoWCFCtoRoWCFCk)
+
+    ### VERIFIER ICI
+    if to_abs(CFCtoCFCk).sum() < 0:
+
+        RoWCFCtoCFCk = to_abs(RoWCFCtoCFCk + to_abs(CFCtoCFCk))
+        RoWCFCtoRoWCFCk = to_abs(RoWCFCtoRoWCFCk - to_abs(CFCtoCFCk))
+        CFCtoCFCk = CFCtoCFCk - CFCtoCFCk
 
     # imports re exported, CFCtoRoWCFCk + RoWCFCtoRoWCFCk - RoWCFCk
 
