@@ -410,7 +410,7 @@ def data_from_SLY(SLY, region):
         df2.columns = ["value"]
         df2 = df2.groupby(level=df2.index.names).sum()
         if df2.xs(region, level="region prod").sum().value < 0:
-            df2 = df2.drop(region, level="region prod") * df2.sum() / df2.xs(region, level="region prod").sum()
+            df2 = df2.drop(region, level="region prod") * df2.sum() / df2.drop(region, level="region prod").sum()
         else:
             df2 = (
                 df2.drop(region, level="region prod")
@@ -1074,7 +1074,10 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         test += NegCFtoCFC2
 
     if test.sum() < 0:
-        CFCtoRoWCFCk += test
+        if (CFCtoRoWCFCk + test).abs().sum() > (CFCtoRoWCFCk + test).sum():
+            CFCtoRoWCFCk = (CFCtoRoWCFCk + test).abs() * (CFCtoRoWCFCk + test).sum() / (CFCtoRoWCFCk + test).abs().sum()
+        else:
+            CFCtoRoWCFCk += test
         RoWCFCtoRoWCFCk -= test
 
     #### adjust RoW CFC again
