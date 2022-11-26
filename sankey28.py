@@ -1156,6 +1156,11 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         )  # different from above because adjustment made by CFC imports re-exported
         CFCtoRoWCFCk = CFCtoRoWCFCk - CFCtoRoWCFCk
 
+    if to_abs(RoWCFCtoCFCk).sum() < 0:
+        CFCtoCFCk = to_abs(CFCtoCFCk + to_abs(RoWCFCtoCFCk))
+        RoWCFCtoRoWCFCk = to_abs(RoWCFCtoRoWCFCk + to_abs(RoWCFCtoCFCk))
+        CFCtoRoWCFCk = to_abs(CFCtoRoWCFCk - to_abs(RoWCFCtoCFCk))
+
     # imports re exported, CFCtoRoWCFCk + RoWCFCtoRoWCFCk - RoWCFCk
 
     try:
