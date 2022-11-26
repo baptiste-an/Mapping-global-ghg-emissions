@@ -960,14 +960,18 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         )
         RoWNegCFtoRoWCFC1 = to_abs(RoWNegCFtoRoWCFC1)
     except KeyError:
-        if region not in data.xs("LY NCF inf", level="LY name").stack().unstack(level="region cons").columns:
-            try:
-                RoWNegCFtoRoWCFC1 = reindex(
-                    data.xs("LY NCF inf", level="LY name").groupby(level="sector prod").sum()["value"]
-                )
-                RoWNegCFtoRoWCFC1 = to_abs(RoWNegCFtoRoWCFC1)
-            except KeyError:
-                None
+        try:
+            cols = data.xs("LY NCF inf", level="LY name").stack().unstack(level="region cons").columns
+            if region not in cols:
+                try:
+                    RoWNegCFtoRoWCFC1 = reindex(
+                        data.xs("LY NCF inf", level="LY name").groupby(level="sector prod").sum()["value"]
+                    )
+                    RoWNegCFtoRoWCFC1 = to_abs(RoWNegCFtoRoWCFC1)
+                except KeyError:
+                    None
+        except KeyError:
+            None
 
     try:
         RoWNegCFtoRoWCFC2 = reindex(
@@ -981,14 +985,18 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         )
         RoWNegCFtoRoWCFC2 = to_abs(RoWNegCFtoRoWCFC2)
     except KeyError:
-        if region not in data.xs("(Lk-L)Y NCF inf", level="LY name").stack().unstack(level="region cons").columns:
-            try:
-                RoWNegCFtoRoWCFC2 = reindex(
-                    data.xs("(Lk-L)Y NCF inf", level="LY name").groupby(level="sector prod").sum()["value"]
-                )
-                RoWNegCFtoRoWCFC2 = to_abs(RoWNegCFtoRoWCFC2)
-            except KeyError:
-                None
+        try:
+            cols = data.xs("(Lk-L)Y NCF inf", level="LY name").stack().unstack(level="region cons").columns
+            if region not in cols:
+                try:
+                    RoWNegCFtoRoWCFC1 = reindex(
+                        data.xs("(Lk-L)Y NCF inf", level="LY name").groupby(level="sector prod").sum()["value"]
+                    )
+                    RoWNegCFtoRoWCFC1 = to_abs(RoWNegCFtoRoWCFC1)
+                except KeyError:
+                    None
+        except KeyError:
+            None
 
     ###
 
@@ -1167,19 +1175,29 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
     data_sankey2 = concat(data_sankey2, GCFtoCFC, "GCF", "CFC")
     data_sankey2 = concat(data_sankey2, RoWGCFtoRoWCFC, "RoW - GCF", "RoW - CFC")
     if len(NegCFtoCFC1) > 0 and len(NegCFtoCFC2):
-        data_sankey2 = concat(data_sankey2, NegCFtoCFC1 + NegCFtoCFC2, "Negative capital formation", "CFC")
+        df = to_abs(NegCFtoCFC1 + NegCFtoCFC2)
+        if df.sum() > 0:
+            data_sankey2 = concat(data_sankey2, df, "Negative capital formation", "CFC")
     elif len(NegCFtoCFC1) > 0:
-        data_sankey2 = concat(data_sankey2, NegCFtoCFC1, "Negative capital formation", "CFC")
+        df = to_abs(NegCFtoCFC1)
+        if df.sum() > 0:
+            data_sankey2 = concat(data_sankey2, df, "Negative capital formation", "CFC")
     elif len(NegCFtoCFC2) > 0:
-        data_sankey2 = concat(data_sankey2, NegCFtoCFC2, "Negative capital formation", "CFC")
+        df = to_abs(NegCFtoCFC2)
+        if df.sum() > 0:
+            data_sankey2 = concat(data_sankey2, df, "Negative capital formation", "CFC")
     if len(RoWNegCFtoRoWCFC1) > 0 and len(RoWNegCFtoRoWCFC2) > 0:
-        data_sankey2 = concat(
-            data_sankey2, RoWNegCFtoRoWCFC1 + RoWNegCFtoRoWCFC2, "RoW - Negative capital formation", "RoW - CFC"
-        )
+        df = to_abs(RoWNegCFtoRoWCFC1 + RoWNegCFtoRoWCFC2)
+        if df.sum() > 0:
+            data_sankey2 = concat(data_sankey2, df, "RoW - Negative capital formation", "RoW - CFC")
     elif len(RoWNegCFtoRoWCFC1) > 0:
-        data_sankey2 = concat(data_sankey2, RoWNegCFtoRoWCFC1, "RoW - Negative capital formation", "RoW - CFC")
+        df = to_abs(RoWNegCFtoRoWCFC1)
+        if df.sum() > 0:
+            data_sankey2 = concat(data_sankey2, df, "RoW - Negative capital formation", "RoW - CFC")
     elif len(RoWNegCFtoRoWCFC2) > 0:
-        data_sankey2 = concat(data_sankey2, RoWNegCFtoRoWCFC2, "RoW - Negative capital formation", "RoW - CFC")
+        df = to_abs(RoWNegCFtoRoWCFC2)
+        if df.sum() > 0:
+            data_sankey2 = concat(data_sankey2, df, "RoW - Negative capital formation", "RoW - CFC")
     if len(GCFtoNCFsup) > 0:
         data_sankey2 = concat(data_sankey2, GCFtoNCFsup, "GCF", "Net capital formation ")
     if len(RoWGCFtoExports) > 0:
@@ -1269,9 +1287,8 @@ def pop():
 
 def nodes_data():
     population = feather.read_feather("pop.feather")
-    for year in range(1995, 2020, 1):
-        for region in pd.read_excel("regions.xlsx", index_col=0).index:
-            # for region in ["RU"]:
+    for region in pd.read_excel("regions.xlsx", index_col=0).sort_values(by="full name").index:
+        for year in range(1995, 2020, 1):
             pop = population[year].loc[region] / 1000000
             node_dict, node_list, data_sankey = data_Sankey(year, region)
             nodes = pd.DataFrame(
