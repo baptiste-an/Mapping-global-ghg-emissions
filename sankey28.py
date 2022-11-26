@@ -996,10 +996,10 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
             cols = data.xs("(Lk-L)Y NCF inf", level="LY name").stack().unstack(level="region cons").columns
             if region not in cols:
                 try:
-                    RoWNegCFtoRoWCFC1 = reindex(
+                    RoWNegCFtoRoWCFC2 = reindex(
                         data.xs("(Lk-L)Y NCF inf", level="LY name").groupby(level="sector prod").sum()["value"]
                     )
-                    RoWNegCFtoRoWCFC1 = to_abs(RoWNegCFtoRoWCFC1)
+                    RoWNegCFtoRoWCFC2 = to_abs(RoWNegCFtoRoWCFC2)
                 except KeyError:
                     None
         except KeyError:
