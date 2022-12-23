@@ -375,8 +375,6 @@ def data_from_SLY(SLY, region):
         )
     )
 
-    #########ZONE DE TEST
-
     try:
 
         df2 = pd.DataFrame(
@@ -434,50 +432,6 @@ def data_from_SLY(SLY, region):
     except KeyError:
         None
 
-    #####################
-
-    # try:
-    #     infRegFromRoW = (
-    #         data.xs("CFC<(Lk-L)Y", level="LY name")
-    #         .unstack(level="region cons")
-    #         .swaplevel(axis=1)[[region]]
-    #         .stack(level=0)
-    #         .unstack(level="region prod")
-    #         .swaplevel(axis=1)
-    #         .drop(region, axis=1)
-    #         .stack(level=0)
-    #     )
-    #     infRegFromRoW["LY name"] = "infRegFromRoW"
-    #     infRegFromRoW = infRegFromRoW.reset_index().set_index(data.index.names)
-    #     data = pd.concat(
-    #         [
-    #             data,
-    #             infRegFromRoW,
-    #         ]
-    #     )
-    # except KeyError:
-    #     try:
-    #         infRegFromRoW = (
-    #             data.xs("CFC<(Lk-L)Y", level="LY name")
-    #             .unstack(level="region cons")
-    #             .swaplevel(axis=1)[[region]]
-    #             .stack(level=0)
-    #             .unstack(level="region prod")
-    #             .swaplevel(axis=1)
-    #             # .drop(region, axis=1)
-    #             .stack(level=0)
-    #         )
-    #         infRegFromRoW["LY name"] = "infRegFromRoW"
-    #         infRegFromRoW = infRegFromRoW.reset_index().set_index(data.index.names)
-    #         data = pd.concat(
-    #             [
-    #                 data,
-    #                 infRegFromRoW,
-    #             ]
-    #         )
-    #     except KeyError:
-    #         None
-
     return data
 
 
@@ -495,7 +449,10 @@ def level_1(data, left_index):
 
     # 1. imp reg
     data.loc[[i for i in data.index if i[4] in left_index], ["1. imp reg"]] = (
-        data.loc[[i for i in data.index if i[4] in left_index]].index.get_level_values(level="region prod") + " "
+        data.loc[[i for i in data.index if i[4] in left_index]]
+        .rename(dictreg)
+        .index.get_level_values(level="region prod")
+        + " "
     )
     return data
 
@@ -638,13 +595,13 @@ def level_7(region, data, right_index):
         {
             "LY Government": "Government",
             "LY Households": "Households",
-            "LY NCF sup": "Net capital formation",
+            "LY NCF sup": "Positive capital formation",
             "LY NPISHS": "NPISHS",
             # "supRegFromAll": "supRegFromAll",
             # "MinusInfRoWFromAll": "MinusInfRoWFromAll",
             "(Lk-L)Y Government": "Government",
             "(Lk-L)Y Households": "Households",
-            "(Lk-L)Y NCF sup": "Net capital formation",
+            "(Lk-L)Y NCF sup": "Positive capital formation",
             "(Lk-L)Y NPISHS": "NPISHS",
         }
     )
@@ -664,14 +621,12 @@ def level_7(region, data, right_index):
             {
                 region + "Government ": "Government ",
                 region + "Households ": "Households ",
-                region + "Net capital formation ": "Net capital formation ",
+                region + "Positive capital formation ": "Positive capital formation ",
                 region + "NPISHS ": "NPISHS ",
                 region + "Households direct ": "Households direct ",
-                # region + "supRegFromAll ": "Exports",
-                # region + "MinusInfRoWFromAll ": "Exports",
                 "ExportsGovernment ": "Exports",
                 "ExportsHouseholds ": "Exports",
-                "ExportsNet capital formation ": "Exports",
+                "ExportsPositive capital formation ": "Exports",
                 "ExportsNPISHS ": "Exports",
                 # "ExportssupRegFromAll ": "Exports",
                 # "ExportsMinusInfRoWFromAll ": "Exports",
@@ -714,11 +669,11 @@ def level_8(region, data, DictRoW, right_index):
     )
     data2.loc[
         [i for i in data2.index if i[4] == "LY NCF sup" and i[5] != region], ["8. cons"]
-    ] = "RoW - Net capital formation "
+    ] = "RoW - Positive capital formation "
     data2.loc[
         [i for i in data2.index if i[4] == "(Lk-L)Y NCF sup" and i[5] != region],
         ["8. cons"],
-    ] = "RoW - Net capital formation "
+    ] = "RoW - Positive capital formation "
 
     # data.loc[
     #     [i for i in data.index if i[4] in ["supRegFromAll", "MinusInfRoWFromAll"]],
@@ -738,11 +693,23 @@ def level_9(region, data, right_index):
     return data
 
 
+def share_houheholds():
+    df = (
+        pd.read_excel("UNFCCC hh data.xlsx", index_col=0)
+        / feather.read_feather("F_hh.feather").groupby(level="region").sum()
+    )
+    # df.count().sum(), 900 values
+    # df[df>0.9].count().sum(), 14 values
+    df2 = df.fillna(0.5)
+    df2[df2 > 0.9] = 0.9
+    feather.write_feather(df2, "share households residential.feather")
+
+
 def data_households(year, region, data):
     # Add households direct
 
     F_hh = feather.read_feather("F_hh.feather")[year].unstack()[region] / 1000
-    share_transport = 0.55
+    share_transport = 1 - feather.read_feather("share households residential.feather").loc[region].loc[year]
 
     for ext in F_hh.index:
         data.loc["Mobility", "Households direct emissions", region, ext, "Households direct", region,] = [
@@ -1211,7 +1178,7 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         if df.sum() > 0:
             data_sankey2 = concat(data_sankey2, df, "RoW - Negative capital formation", "RoW - CFC")
     if len(GCFtoNCFsup) > 0:
-        data_sankey2 = concat(data_sankey2, GCFtoNCFsup, "GCF", "Net capital formation ")
+        data_sankey2 = concat(data_sankey2, GCFtoNCFsup, "GCF", "Positive capital formation ")
     if len(RoWGCFtoExports) > 0:
         data_sankey2 = concat(data_sankey2, RoWGCFtoExports, "RoW - GCF", "Exports")
     data_sankey2 = concat(data_sankey2, RoWCFCtoCFCk, "RoW - CFC", "CFCk")
@@ -1358,7 +1325,7 @@ def nodes_data():
                             nodes["position"].loc[node] = "8. cons"
                 except KeyError:
                     nodes = nodes.drop(node)
-            nodes.loc["Net capital formation "]["position"] = "7. cbaK"
+            nodes.loc["Positive capital formation "]["position"] = "7. cbaK"
 
             nodes = nodes.drop([i for i in nodes.index if nodes["value Mt"].isnull().loc[i]])
             nodes = nodes.drop([i for i in nodes["value Mt"].index if nodes["value Mt"].loc[i] == 0])
@@ -1402,7 +1369,7 @@ def node_y(nodes, node, white, color, region):
         "Households ",
         "Government ",
         "NPISHS ",
-        "Net capital formation ",
+        "Positive capital formation ",
     ]:
         df2 = (
             nodes.reset_index()
@@ -1417,7 +1384,7 @@ def node_y(nodes, node, white, color, region):
                     "RoW - Education",
                     "RoW - Health",
                     "RoW - Other goods and services",
-                    "RoW - Net capital formation ",
+                    "RoW - Positive capital formation ",
                     # "CFC imports re-exported",
                 ]
             ]
@@ -1458,9 +1425,9 @@ def node_y(nodes, node, white, color, region):
             nodes.reset_index()
             .set_index(["position", "index"])
             .loc["7. cbaK"]["value Mt"]
-            .loc["Net capital formation "]
+            .loc["Positive capital formation "]
         )
-        df.loc["Net capital formation "] = df3
+        df.loc["Positive capital formation "] = df3
 
     if node in [
         "RoW - Mobility",
@@ -1470,16 +1437,16 @@ def node_y(nodes, node, white, color, region):
         "RoW - Education",
         "RoW - Health",
         "RoW - Other goods and services",
-        "RoW - Net capital formation ",
+        "RoW - Positive capital formation ",
         # "CFC imports re-exported",
     ]:
         df3 = (
             nodes.reset_index()
             .set_index(["position", "index"])
             .loc["7. cbaK"]["value Mt"]
-            .loc["Net capital formation "]
+            .loc["Positive capital formation "]
         )
-        df.loc["Net capital formation "] = df3
+        df.loc["Positive capital formation "] = df3
 
     total = max(
         nodes.reset_index().set_index("position").loc["4. cba"]["value Mt"].sum(),
@@ -1507,7 +1474,7 @@ def node_y(nodes, node, white, color, region):
                 "Households",
                 "Government",
                 "NPISHS",
-                "Net capital formation",
+                "Positive capital formation",
                 # "Consumption of fixed capital",
                 "GCF",
                 "Negative capital formation",
@@ -1516,7 +1483,7 @@ def node_y(nodes, node, white, color, region):
                 "RoW - Households",
                 "RoW - Government",
                 "RoW - NPISHS",
-                "RoW - Net capital formation",
+                "RoW - Positive capital formation",
                 # "RoW - Consumption of fixed capital ",
             ]
         )
@@ -1527,7 +1494,7 @@ def node_y(nodes, node, white, color, region):
                 "Households ",
                 "Government ",
                 "NPISHS ",
-                "Net capital formation ",
+                "Positive capital formation ",
                 # "Exports",
                 "RoW - Mobility",
                 "RoW - Shelter",
@@ -1536,7 +1503,7 @@ def node_y(nodes, node, white, color, region):
                 "RoW - Education",
                 "RoW - Health",
                 "RoW - Other goods and services",
-                "RoW - Net capital formation ",
+                "RoW - Positive capital formation ",
                 # "CFC imports re-exported",
             ]
         )
@@ -1553,7 +1520,7 @@ def node_y(nodes, node, white, color, region):
                     "Education",
                     "Health",
                     "Other goods and services",
-                    "Net capital formation ",
+                    "Positive capital formation ",
                     "RoW - Mobility",
                     "RoW - Shelter",
                     "RoW - Food",
@@ -1561,7 +1528,7 @@ def node_y(nodes, node, white, color, region):
                     "RoW - Education",
                     "RoW - Health",
                     "RoW - Other goods and services",
-                    "RoW - Net capital formation ",
+                    "RoW - Positive capital formation ",
                     # "CFC imports re-exported",
                 ]
                 if i in nodes.index
@@ -1579,7 +1546,7 @@ def node_y(nodes, node, white, color, region):
                     "Education",
                     "Health",
                     "Other goods and services",
-                    "Net capital formation ",
+                    "Positive capital formation ",
                     "Africa",
                     "Asia",
                     "Europe",
@@ -1670,7 +1637,7 @@ def Nodes(region, year, height, top_margin, bottom_margin, pad, ratio):
             "RoW - Education",
             "RoW - Health",
             "RoW - Other goods and services",
-            "RoW - Net capital formation ",
+            "RoW - Positive capital formation ",
         ]
     ] = 0.77
     return nodes, pad2
@@ -1837,7 +1804,7 @@ def fig_sankey_cap(year, region):
             "RoW - Education",
             "RoW - Health",
             "RoW - Other goods and services",
-            "RoW - Net capital formation ",
+            "RoW - Positive capital formation ",
         ]
     ] = 0.76
 
