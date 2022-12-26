@@ -8,7 +8,7 @@ from flask_caching import Cache
 
 # cache = Cache(app.server, config={"CACHE_TYPE": "FileSystemCache", "CACHE_DIR": "cache"})
 
-DATA_PATH = pathlib.Path(__file__).parent  # .joinpath("data").resolve()
+DATA_PATH = pathlib.Path(__file__).parent  # .joinpath("Data").resolve()
 
 REGIONS = {}
 
@@ -643,16 +643,16 @@ def fig_sankey_cap(year, region):
                         ],
                         (
                             [
-                                0.001,
-                                0.08,  # 8
-                                0.18,  # 10
-                                0.27,  # 9
-                                0.41,  # 13
-                                0.50,  # 9
-                                0.58,  # 8
-                                0.67,  # 12
-                                0.84,  # 10
-                                0.999,
+                                0.00001,
+                                0.095,  # 9.5
+                                0.19,  # 9.5
+                                0.285,  # 9.5
+                                0.44,  # 15.5
+                                0.52,  # 8
+                                0.6,  # 8
+                                0.68,  # 8
+                                0.835,  # 15.5
+                                1,  # 16.5
                             ]
                         ),
                     )
@@ -661,24 +661,24 @@ def fig_sankey_cap(year, region):
             y=lambda d: [node_y(nodes, i, white, color, region) for i in d.index],
         )
 
-        nodes["x", "Exports"] = 0.67
+        nodes["x", "Exports"] = 0.68
         if "CFC imports re-exported" in nodes.index:
             try:
-                nodes["x", "CFC imports re-exported"] = 0.65
+                nodes["x", "CFC imports re-exported"] = 0.68
             except KeyError:
                 None
 
         try:
-            nodes["x", "RoW - Negative capital formation"] = 0.45
+            nodes["x", "RoW - Negative capital formation"] = 0.44
         except KeyError:
             None
 
         try:
-            nodes["x", "Negative capital formation"] = 0.45
+            nodes["x", "Negative capital formation"] = 0.44
         except KeyError:
             None
 
-        nodes["x", "Footprint"] = 0.999
+        nodes["x", "Footprint"] = 1
 
         return nodes, pad2
 
@@ -689,12 +689,12 @@ def fig_sankey_cap(year, region):
         DATA_PATH.joinpath("Sankeys/" + region + "/nodelist" + region + str(year) + ".feather")
     )[0].values
 
-    height = 450
+    height = 480
     width = 1100
-    top_margin = 50
-    bottom_margin = 0
-    left_margin = 50
-    right_margin = 50
+    top_margin = 30
+    bottom_margin = 10
+    left_margin = 10
+    right_margin = 10
     pad = 10
 
     nodes, pad2 = Nodes(region, year, height, top_margin, bottom_margin, pad, ratio)
