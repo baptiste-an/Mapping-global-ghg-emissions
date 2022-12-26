@@ -7,30 +7,45 @@ from general_functions import *
 import pymrio
 import numpy as np
 
-pathexio = "Data/"
-
 
 def Kbar():
+    """Calculates Kbar for years 2016-2019 by nowcasting Kbar2015.
 
-    CFC_WB = pd.read_excel("World Bank/CFC worldbank.xlsx", header=3, index_col=[0])[
+    We use CFC data of years 2016-2019 but first rescale them using WorldBank values
+    so that the ratio GFCF/CFC is the same for EXIOBASE and WorldBank data.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+    """
+
+    # read data from WorldBank
+    CFC_WB = pd.read_excel("Data/World Bank/CFC worldbank.xlsx", header=3, index_col=[0])[
         [str(i) for i in range(2015, 2020, 1)]
-    ]
+    ]  # consumption of fixed capital
 
-    GFCF_WB = pd.read_excel("World Bank/GFCF worldbank.xlsx", header=3, index_col=[0])[
+    GFCF_WB = pd.read_excel("Data/World Bank/GFCF worldbank.xlsx", header=3, index_col=[0])[
         [str(i) for i in range(2015, 2020, 1)]
-    ]
+    ]  # gross fixed capital formation
 
-    # we want to set to NaN values for regions that don't have both CFC and GFCF data
+    # here we want to aggregate WorldBank data to Exiobase regions
+
+    # first, set to NaN values the regions that don't have both CFC and GFCF data
     CFC_WB = CFC_WB * GFCF_WB / GFCF_WB  # in case some countries have data for CFC but not GFCF
     GFCF_WB = GFCF_WB * CFC_WB / CFC_WB
 
-    CFC_WB = rename_region(CFC_WB, "Country Name").drop("Z - Aggregated categories")
     # rename the regions to a common format
-    CFC_WB["region"] = cc.convert(names=CFC_WB.index, to="EXIO3")
+    CFC_WB = rename_region(CFC_WB, "Country Name").drop("Z - Aggregated categories")
     # convert the common format to EXIOBASE format
-    CFC_WB = CFC_WB.reset_index().set_index("region").drop("Country Name", axis=1).groupby(level="region").sum()
+    CFC_WB["region"] = cc.convert(names=CFC_WB.index, to="EXIO3")
     # define EXIOBASE regions as index
+    CFC_WB = CFC_WB.reset_index().set_index("region").drop("Country Name", axis=1).groupby(level="region").sum()
 
+    # same as above for GFCF data
     GFCF_WB = rename_region(GFCF_WB, "Country Name").drop("Z - Aggregated categories")
     GFCF_WB["region"] = cc.convert(names=GFCF_WB.index, to="EXIO3")
     GFCF_WB = GFCF_WB.reset_index().set_index("region").drop("Country Name", axis=1).groupby(level="region").sum()
@@ -41,24 +56,26 @@ def Kbar():
 
     Kbar15 = feather.read_feather("Data/Kbar/Kbar_2015.feather")
 
-    # We calculate coefficients for year 2015 that will be multiplied by CFC for year 2017
-    Kbarcoefs = Kbar15.div(Kbar15.sum(axis=1), axis=0)
+    # We calculate coefficients for year 2015 that will be multiplied by CFC for other years
+    Kbarcoefs = Kbar15.div(Kbar15.sum(axis=1), axis=0)  # the sum of the lines = CFC
 
     for i in range(2016, 2020, 1):
-        pathIOT = pathexio + "EXIO3/IOT_" + str(i) + "_pxp/"
-        Z = feather.read_feather(pathIOT + "Z.feather").fillna(0)
+        pathIOT = "Data/EXIO3/IOT_" + str(i) + "_pxp/"
+        Z = feather.read_feather(pathIOT + "Z.feather").fillna(
+            0
+        )  # if some coefs don't exist in Kbar15, we use those of Z
         Zcoefs = Z.div(Z.sum(axis=1), axis=0)
 
         Kbarcoefsyear = Kbarcoefs.combine_first(Zcoefs).combine_first(
             pd.DataFrame(np.identity(9800), index=Z.index, columns=Z.columns)
         )
 
-        GFCF_exio = feather.read_feather(pathexio + "EXIO3/IOT_" + str(i) + "_pxp/Y.feather").swaplevel(axis=1)[
+        GFCF_exio = feather.read_feather("Data/EXIO3/IOT_" + str(i) + "_pxp/Y.feather").swaplevel(axis=1)[
             "Gross fixed capital formation"
         ]  # aggregated 49 regions, 1 product
 
         CFC_exio = pd.read_csv(
-            pathexio + "EXIO3/IOT_" + str(i) + "_pxp/satellite/F.txt",
+            "Data/EXIO3/IOT_" + str(i) + "_pxp/satellite/F.txt",
             delimiter="\t",
             header=[0, 1],
             index_col=[0],
@@ -76,12 +93,21 @@ def Kbar():
         )
 
 
-# function to diaggregate GDP into all the formats needed
 def Y_all():
+    """Disaggregates GDP into all the formats needed, saves it to Yk.feather.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+    """
 
     for i in range(1995, 2020, 1):
-        pathIOT = pathexio + "EXIO3/IOT_" + str(i) + "_pxp/"
-        Kbar = feather.read_feather(pathexio + "Kbar/Kbar_" + str(i) + ".feather").fillna(0)
+        pathIOT = "Data/EXIO3/IOT_" + str(i) + "_pxp/"
+        Kbar = feather.read_feather("Data/Kbar/Kbar_" + str(i) + ".feather").fillna(0)
         Y = feather.read_feather(pathIOT + "Y.feather")
 
         df = pd.DataFrame([], index=Y.stack(level=0).index)
@@ -90,16 +116,15 @@ def Y_all():
         df["NPISHS"] = Y.stack(level=0)[
             "Final consumption expenditure by non-profit organisations serving households (NPISH)"
         ]
-        # df["CFC"] = Kbar.groupby(level="region", axis=1).sum().stack()
 
         NET = pd.DataFrame(index=df.unstack().index)
         CFC = pd.DataFrame(index=df.unstack().index)
         for region in Y.stack().columns:
 
-            # pour chauqe pays, on a CFC par secteur
-            cfc = Kbar.loc[region].sum(
-                axis=1
-            )  # peu importe qui "achète" le cfc de cette région, ce qui compte c'est à qui elle l'achète
+            cfc = Kbar.loc[region].sum(axis=1)  # CFC of region for each one of the 200 sectors
+
+            # where does the CFC come from? We use the same shares as GCF data
+
             # à comparer avec GCF du pays
             gcf_all = (
                 Y.stack(level=0)[
@@ -113,8 +138,9 @@ def Y_all():
                 .sum(axis=1)
                 .unstack()[region]
                 .unstack()
-            )
-            gcf_shares = gcf_all.div(gcf_all.sum(), axis=1)
+            )  # lines=regions, columns=sectors of GCF
+
+            gcf_shares = gcf_all.div(gcf_all.sum(), axis=1)  # share of origin region for each sector
             gcf_shares.loc[region, gcf_shares.isnull().all()] = 1
             gcf = gcf_all.sum()
             diff = gcf - cfc
@@ -124,25 +150,16 @@ def Y_all():
         df["CFC"] = CFC.stack()
         df["NCF"] = NET.stack()
 
-        # df["NCF"] = Y.stack(level=0)[
-        #             [
-        #                 "Changes in inventories",
-        #                 "Changes in valuables",
-        #                 "Exports: Total (fob)",
-        #                 "Gross fixed capital formation",
-        #             ]
-        #         ].sum(axis=1) - df["CFC"]
         df.index.names = ["region prod", "sector prod", "region cons"]
-        # en fait devrait etre ["region cons", "sector cons", "region"]
+        # names will be changed again in SLY()
 
         feather.write_feather(df, pathIOT + "Yk.feather")
 
     return None
 
 
-# function to calculate Lk from Z and Kbar
 def L_and_Lk():
-    """Calculates Lk from Kbar and saves it to the Exiobase data files.
+    """Calculates Lk and L and saves it to the Exiobase data files.
 
     Parameters
     ----------
@@ -153,10 +170,10 @@ def L_and_Lk():
     None
     """
     for i in range(1995, 2020, 1):
-        pathIOT = pathexio + "EXIO3/IOT_" + str(i) + "_pxp/"
+        pathIOT = "Data/EXIO3/IOT_" + str(i) + "_pxp/"
         Y = feather.read_feather(pathIOT + "Y.feather").groupby(level="region", axis=1).sum()
         Z = feather.read_feather(pathIOT + "Z.feather").fillna(0)
-        Kbar = feather.read_feather(pathexio + "Kbar/Kbar_" + str(i) + ".feather").fillna(0)
+        Kbar = feather.read_feather("Data/Kbar/Kbar_" + str(i) + ".feather").fillna(0)
 
         Zk = pd.DataFrame(
             Z + Kbar, index=Z.index, columns=Z.columns
@@ -172,7 +189,8 @@ def L_and_Lk():
 
 def SLY():
     """Calculates SLY with all the possible combinations of S, L and Y.
-    Sectors are aggregated according to concordance.xlsx.
+    Sectors are aggregated according to concordance.xlsx
+    Results are saved in folder SLY/region/year.feather
 
     Parameters
     ----------
@@ -192,22 +210,22 @@ def SLY():
     if not os.path.exists("SLY"):
         os.mkdir("SLY")
 
-    conc_sec_cons = pd.read_excel("concordance.xlsx", sheet_name="sector cons", index_col=[0, 1])
-    conc_sec_prod = pd.read_excel("concordance.xlsx", sheet_name="sector prod", index_col=[0, 1])
+    conc_sec_cons = pd.read_excel("Data/concordance.xlsx", sheet_name="sector cons", index_col=[0, 1])
+    conc_sec_prod = pd.read_excel("Data/concordance.xlsx", sheet_name="sector prod", index_col=[0, 1])
     conc_reg_prod = pd.read_excel(
-        "concordance.xlsx",
+        "Data/concordance.xlsx",
         sheet_name="region prod",
         index_col=[0, 1],
     )
     conc_reg_cons = pd.read_excel(
-        "concordance.xlsx",
+        "Data/concordance.xlsx",
         sheet_name="region cons",
         index_col=[0, 1],
     )
-    conc_cap = pd.read_excel("concordance.xlsx", sheet_name="capital", index_col=[0, 1])
+    conc_cap = pd.read_excel("Data/concordance.xlsx", sheet_name="capital", index_col=[0, 1])
 
     for i in range(1995, 2020, 1):
-        pathIOT = pathexio + "EXIO3/IOT_" + str(i) + "_pxp/"
+        pathIOT = "Data/EXIO3/IOT_" + str(i) + "_pxp/"
 
         Yk = feather.read_feather(pathIOT + "Yk.feather")
         L = feather.read_feather(pathIOT + "L.feather")
@@ -258,7 +276,7 @@ def SLY():
         SLY = pd.DataFrame()
 
         S_imp = pd.read_csv(
-            pathexio + "EXIO3/IOT_" + str(i) + "_pxp/impacts/S.txt",
+            "Data/EXIO3/IOT_" + str(i) + "_pxp/impacts/S.txt",
             delimiter="\t",
             header=[0, 1],
             index_col=[0],
@@ -292,11 +310,21 @@ def SLY():
 
 
 def F_hh():
+    """Aggregates direct emissions by households into a single file F_hh.feather.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+    """
     F_hh = pd.DataFrame()
     for year in range(1995, 2020, 1):
         F_hh_imp = (
             pd.read_csv(
-                pathexio + "EXIO3/IOT_" + str(year) + "_pxp/impacts/F_Y.txt",
+                "Data/EXIO3/IOT_" + str(year) + "_pxp/impacts/F_Y.txt",
                 delimiter="\t",
                 header=[0, 1],
                 index_col=[0],
@@ -321,4 +349,65 @@ def F_hh():
         F_hh_imp.loc["SF6"] = F_hh_imp.loc["GHG"] / 1000000 - F_hh_imp.loc[["CO2", "N2O", "CH4"]].sum()
         F_hh_imp = F_hh_imp.drop("GHG")
         F_hh[year] = F_hh_imp.groupby(level="region", axis=1).sum().stack()
-    feather.write_feather(F_hh, "F_hh.feather")
+    feather.write_feather(F_hh, "Data/F_hh.feather")
+
+
+def share_houheholds():
+    """Disaggregates direct emissions by households into residental and non residential.
+
+    Based on UNFCCC data. Results saved to "share households residential.feather"
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+    """
+    df = (
+        pd.read_excel("Data/UNFCCC hh data.xlsx", index_col=0)
+        / feather.read_feather("Data/F_hh.feather").groupby(level="region").sum()
+    )
+    # df.count().sum(), 900 values
+    # df[df>0.9].count().sum(), 14 values out of 900 are above 90%, too much for residential
+    # we make the hypothesis of a saturation at 90%
+    df2 = df.fillna(0.5)  # when no data, 50%
+    df2[df2 > 0.9] = 0.9
+    feather.write_feather(df2, "Results/share households residential.feather")
+
+
+def pop():
+    """Converts population data form WorldBank format to EXIOBASE format, save it in pop.feather.
+
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+    """
+    pop = (
+        rename_region(
+            pd.read_csv("Data/World Bank/pop.csv", header=[2], index_col=[0])[[str(i) for i in range(1995, 2020, 1)]],
+            level="Country Name",
+        )
+        .drop("Z - Aggregated categories")
+        .rename(
+            dict(
+                zip(
+                    cc.name_shortas("EXIO3")["name_short"].values,
+                    cc.name_shortas("EXIO3")["EXIO3"].values,
+                )
+            )
+        )
+        .groupby(level=0)
+        .sum()
+    )
+    pop.columns = [int(i) for i in pop.columns]
+
+    pop.loc["TW"] = pd.read_excel("Data/pop Taiwan.xls", header=0, index_col=0)["TW"]
+
+    feather.write_feather(pop, "Data/pop.feather")
