@@ -67,6 +67,7 @@ def variables(region):
         "RoW - ",
     )
     DictRoW[region] = ""
+    DictRoW[dictreg[region]] = ""
 
     left_index = [
         "LY Government",
@@ -561,7 +562,7 @@ def data_households(year, region, data):
     # Add households direct
 
     F_hh = feather.read_feather("Data/F_hh.feather")[year].unstack()[region] / 1000
-    share_transport = 1 - feather.read_feather("share households residential.feather").loc[region].loc[year]
+    share_transport = 1 - feather.read_feather("Results/share households residential.feather").loc[region].loc[year]
 
     for ext in F_hh.index:
         data.loc["Mobility", "Households direct   ", region, ext, "Households direct", region,] = [
@@ -682,10 +683,31 @@ def data_STV(data_sankey, data, color_dict, node_dict):
     return data_sankey
 
 
-### comment here
-
-
 def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
+    """Adds the flows for the junction between cba and cbak.
+
+    As one cannot precisely trace all the flows, we use many steps to represent the flows avoiding negative flows.
+    Many conditions exist to adapt to all particular cases.
+
+    Parameters
+    ----------
+    data_sankey : pd.DataFrame
+        Table used to represent the flows in the format source/target/value
+    region : string
+    data : pd.DataFrame
+        Table that will in the end contain all the information required to build sankey.
+    node_dict : dictionnary
+        Dict to transform node names into node numbers
+    color_dict : dictionnary
+        Dict to transform production sector into color
+
+
+    Returns
+    -------
+    data_sankey : pd.DataFrame
+        Table used to represent the flows in the format source/target/value
+
+    """
     ind = [
         "Agriculture-food",
         "Energy industry",
@@ -708,11 +730,15 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
         CFCtoRoWCFCk,
         RoWCFCtoRoWCFCk,
         importsreexp,
-    ) = [pd.DataFrame()] * 13
+    ) = [
+        pd.DataFrame()
+    ] * 13  # all of the flows to be added
     data_sankey2 = data_sankey
 
     def reindex(df):
-        return pd.DataFrame(df, index=ind, columns=["value"])["value"].fillna(0)
+        return pd.DataFrame(df, index=ind, columns=["value"])["value"].fillna(
+            0
+        )  # add nans to a dataframe and indexes it using "ind" to make operations with other dataframew with same index
 
     def concat(data_sankey2, df, node1, node2):
         data_sankey2 = pd.concat(
@@ -1377,8 +1403,21 @@ def data_Sankey(year, region):
 
 
 def nodes_data():
-    population = feather.read_feather("pop.feather")
-    for region in pd.read_excel("regions.xlsx", index_col=0).sort_values(by="full name").index:
+    """For every year and region, saves the files nodes.feather, nodelist.feather and data.feather.
+
+    These three files will be read by the function fig_sankey to build the figures.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+
+    """
+    population = feather.read_feather("Data/pop.feather")
+    for region in pd.read_excel("Data/regions.xlsx", index_col=0).sort_values(by="full name").index:
         for year in range(1995, 2020, 1):
             pop = population[year].loc[region] / 1000000
             node_dict, node_list, data_sankey = data_Sankey(year, region)
@@ -1401,20 +1440,20 @@ def nodes_data():
                     # j_modified = pd.DataFrame(node_list).replace(dict(FR="France"))[0].loc[i]
                     # Mettre dict complet pour toutes régions
                     if node_dict[node] in source_data.index:
-                        nodes["value Mt"].loc[node] = source_data["value"].loc[node_dict[node]]
+                        nodes.loc[node, "value Mt"] = source_data["value"].loc[node_dict[node]]
 
                         a = data_sankey.reset_index().set_index("source")["position"].loc[node_dict[node]]
                         if node in [
                             "Negative capital formation",
                             "RoW - Negative capital formation",
                         ]:
-                            nodes["position"].loc[node] = "4. cba"
+                            nodes.loc[node, "position"] = "4. cba"
                         elif type(a) == str:
                             nodes["position"].loc[node] = a
                         elif node in ["GCF", "RoW - GCF"]:
-                            nodes["position"].loc[node] = "4. cba"
+                            nodes.loc[node, "position"] = "4. cba"
                         else:
-                            nodes["position"].loc[node] = a.values[0]
+                            nodes.loc[node, "position"] = a.values[0]
 
                     else:
                         nodes["value Mt"].loc[node] = target_data["value"].loc[node_dict[node]]
@@ -1428,17 +1467,17 @@ def nodes_data():
                             "South America",
                             "Footprint",
                         ]:
-                            nodes["position"].loc[node] = "9. exp"
+                            nodes.loc[node, "position"] = "9. exp"
 
                         elif node in ["CFC", "RoW - CFC"]:
-                            nodes["position"].loc[node] = "5. ncf"
+                            nodes.loc[node, "position"] = "5. ncf"
                         elif node in ["CFCk", "RoW - CFCk"]:
-                            nodes["position"].loc[node] = "6. endo"
+                            nodes.loc[node, "position"] = "6. endo"
                         else:
-                            nodes["position"].loc[node] = "8. cons"
+                            nodes.loc[node, "position"] = "8. cons"
                 except KeyError:
                     nodes = nodes.drop(node)
-            nodes.loc["Positive capital formation "]["position"] = "7. cbaK"
+            nodes.loc["Positive capital formation ", "position"] = "7. cbaK"
 
             nodes = nodes.drop([i for i in nodes.index if nodes["value Mt"].isnull().loc[i]])
             nodes = nodes.drop([i for i in nodes["value Mt"].index if nodes["value Mt"].loc[i] == 0])
@@ -1472,31 +1511,54 @@ def nodes_data():
                 + [str(round(i, 2)) for i in nodes["value t/cap"]]
                 + ")"
             )
-
-            if not os.path.exists("Sankeys/" + region):
-                os.mkdir("Sankeys/" + region)
-            feather.write_feather(nodes, "Sankeys/" + region + "/nodes" + region + str(year) + ".feather")
+            if not os.path.exists("Results/Sankey_data"):
+                os.mkdir("Results/Sankey_data")
+            if not os.path.exists("Results/Sankey_data/" + region):
+                os.mkdir("Results/Sankey_data/" + region)
+            feather.write_feather(nodes, "Results/Sankey_data/" + region + "/nodes" + region + str(year) + ".feather")
             feather.write_feather(
                 data_sankey,
-                "Sankeys/" + region + "/data" + region + str(year) + ".feather",
+                "Results/Sankey_data/" + region + "/data" + region + str(year) + ".feather",
             )
             feather.write_feather(
                 pd.DataFrame(node_list),
-                "Sankeys/" + region + "/nodelist" + region + str(year) + ".feather",
+                "Results/Sankey_data/" + region + "/nodelist" + region + str(year) + ".feather",
             )
 
 
 def norm():
+    """Creates coefficients to normalize sankey diagrams in Mt for every region so that flow sizes vary with time.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+
+    """
     regions = pd.read_excel("regions.xlsx")["region"].values
     df = pd.DataFrame([], columns=[i for i in range(1995, 2020, 1)], index=regions)
     for year in range(1995, 2020, 1):
         for region in regions:
             data_sankey = feather.read_feather("Sankeys/" + region + "/data" + region + str(year) + ".feather")
             df.loc[region].loc[year] = data_sankey.set_index("position").loc["0. ges"].sum().loc["value"]
-    feather.write_feather(df.div(pd.DataFrame(df.T.max())[0], axis=0), "norm.feather")
+    feather.write_feather(df.div(pd.DataFrame(df.T.max())[0], axis=0), "Results/norm.feather")
 
 
 def norm_cap():
+    """Creates coefficients to normalize sankey diagrams in t/cap for every region so that flow sizes vary with time.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+
+    """
     population = feather.read_feather("pop.feather")
     regions = pd.read_excel("regions.xlsx")["region"].values
     df = pd.DataFrame([], columns=[i for i in range(1995, 2020, 1)], index=regions)
@@ -1505,4 +1567,4 @@ def norm_cap():
             pop = population[year].loc[region] / 1000
             data_sankey = feather.read_feather("Sankeys/" + region + "/data" + region + str(year) + ".feather")
             df.loc[region].loc[year] = data_sankey.set_index("position").loc["0. ges"].sum().loc["value"] / pop
-    feather.write_feather(df.div(pd.DataFrame(df.T.max())[0], axis=0), "norm_cap.feather")
+    feather.write_feather(df.div(pd.DataFrame(df.T.max())[0], axis=0), "Results/norm_cap.feather")

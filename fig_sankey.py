@@ -4,6 +4,7 @@ import pyarrow.feather as feather
 import pathlib
 import json
 from flask_caching import Cache
+import os
 
 
 # cache = Cache(app.server, config={"CACHE_TYPE": "FileSystemCache", "CACHE_DIR": "cache"})
@@ -12,7 +13,7 @@ DATA_PATH = pathlib.Path(__file__).parent  # .joinpath("Data").resolve()
 
 REGIONS = {}
 
-with open(f"{DATA_PATH}/regions.json") as f:
+with open(f"{DATA_PATH}/Data/regions.json") as f:
     REGIONS = json.loads(f.read())
 
 LABELS = [{"label": v, "value": k} for k, v in REGIONS.items()]
@@ -32,8 +33,19 @@ color_dict = dict(
 
 
 def fig_sankey(year, region):
+    """Builds sankey diagram
 
-    norm = feather.read_feather(DATA_PATH.joinpath("norm.feather"))
+    Parameters
+    ----------
+    year : int
+    region : string
+
+    Returns
+    -------
+    fig : figure
+    """
+
+    norm = feather.read_feather(DATA_PATH.joinpath("Results/norm.feather"))
 
     ratio = norm.loc[region].loc[year]
 
@@ -49,7 +61,7 @@ def fig_sankey(year, region):
         if node == "Exports":
             node = "RoW - Health"
         if node == "CFC imports re-exported":
-            node = "RoW - Mobility"
+            node = "RoW - Food"
         if node == "Footprint":
             node = "Food"
 
@@ -254,7 +266,7 @@ def fig_sankey(year, region):
 
     def Nodes(region, year, height, top_margin, bottom_margin, pad, ratio):
         nodes = feather.read_feather(
-            DATA_PATH.joinpath("Sankeys/" + region + "/nodes" + region + str(year) + ".feather")
+            DATA_PATH.joinpath("Results/Sankey_data/" + region + "/nodes" + region + str(year) + ".feather")
         )
 
         size = height - top_margin - bottom_margin
@@ -300,32 +312,30 @@ def fig_sankey(year, region):
             y=lambda d: [node_y(nodes, i, white, color, region) for i in d.index],
         )
 
-        # nodes["x"].loc["Exports"] = 0.67
-        if "CFC imports re-exported" in nodes.index:
-            try:
-                nodes["x", "CFC imports re-exported"] = 0.68
-            except KeyError:
-                None
-
         try:
-            nodes["x", "RoW - Negative capital formation"] = 0.48
+            nodes.loc["CFC imports re-exported", "x"] = 0.68
         except KeyError:
             None
 
         try:
-            nodes["x", "Negative capital formation"] = 0.48
+            nodes.loc["RoW - Negative capital formation", "x"] = 0.44
         except KeyError:
             None
 
-        nodes["x", "Footprint"] = 1
+        try:
+            nodes.loc["Negative capital formation", "x"] = 0.44
+        except KeyError:
+            None
+
+        nodes.loc["Footprint", "x"] = 1
 
         return nodes, pad2
 
     data_sankey = feather.read_feather(
-        DATA_PATH.joinpath("Sankeys/" + region + "/data" + region + str(year) + ".feather")
+        DATA_PATH.joinpath("Results/Sankey_data/" + region + "/data" + region + str(year) + ".feather")
     ).replace(color_dict)
     node_list = feather.read_feather(
-        DATA_PATH.joinpath("Sankeys/" + region + "/nodelist" + region + str(year) + ".feather")
+        DATA_PATH.joinpath("Results/Sankey_data/" + region + "/nodelist" + region + str(year) + ".feather")
     )[0].values
 
     height = 480
@@ -344,7 +354,7 @@ def fig_sankey(year, region):
         value=data_sankey["value"],
         label=list(str(x) + " MtCO2eq" for x in data_sankey["value"].astype(float).round(1)),
         color=data_sankey["color"],
-        hovertemplate="",
+        # hovertemplate="",
     )
 
     node = {
@@ -361,12 +371,13 @@ def fig_sankey(year, region):
         node=node,  #
         valueformat=".0f",
         valuesuffix=" Mt CO2eq",
+        hoverinfo="none"
         # arrangement="snap",
     )
 
     fig = go.Figure(sankey)
     fig.update_layout(
-        hovermode="y",
+        # hovermode="y",
         title=f"<b>Greenhouse gas footprint of {REGIONS[region]} in {year} (Mt CO2eq)<b>",
         font=dict(size=10, color="black"),
         paper_bgcolor="white",
@@ -376,8 +387,8 @@ def fig_sankey(year, region):
 
     fig.update_traces(
         legendrank=10,
-        node_hoverinfo="all",
-        hoverlabel=dict(align="left", bgcolor="white", bordercolor="black"),
+        # node_hoverinfo="none", # ‘all’, ‘none’, ‘skip’
+        # hoverlabel=dict(align="left", bgcolor="white", bordercolor="black"),
     )
 
     fig.update_layout(
@@ -386,19 +397,48 @@ def fig_sankey(year, region):
         height=height,
         margin=dict(l=left_margin, r=right_margin, t=top_margin, b=bottom_margin),
     )
-    fig.write_image("suppr.svg", engine="orca")
+    # fig.write_image("suppr.svg", engine="orca")
 
     return fig
 
 
 def fig_sankey_cap(year, region):
+    """Builds sankey diagram for emissions per capita.
 
-    norm = feather.read_feather(DATA_PATH.joinpath("norm_cap.feather"))  # Different norm in t/cap and Mt
-    pop = feather.read_feather(DATA_PATH.joinpath("pop.feather"))
+    Parameters
+    ----------
+    year : int
+    region : string
+
+    Returns
+    -------
+    fig : figure
+    """
+
+    norm = feather.read_feather(DATA_PATH.joinpath("Results/norm_cap.feather"))  # Different norm in t/cap and Mt
+    pop = feather.read_feather(DATA_PATH.joinpath("Data/pop.feather"))
 
     ratio = norm.loc[region].loc[year]
 
     def node_y(nodes, node, white, color, region):
+        """Assigns y position to node.
+
+        Parameters
+        ----------
+        nodes : pd.DataFrame
+            dataframe with all the nodes information
+        node : string
+            name of node whose y coordinate is wanted
+        white : float
+            share of the sankey's height which is white (0.3 means that 70% of the height will be filled with color)
+        color : float
+            1-white
+        region : string
+
+        Returns
+        -------
+        y_coordinate : float
+        """
         if node == "CFC":
             node = "GCF"
         if node == "RoW - CFC":
@@ -410,7 +450,7 @@ def fig_sankey_cap(year, region):
         if node == "Exports":
             node = "RoW - Health"
         if node == "CFC imports re-exported":
-            node = "RoW - Mobility"
+            node = "RoW - Food"
         if node == "Footprint":
             node = "Food"
 
@@ -615,7 +655,7 @@ def fig_sankey_cap(year, region):
 
     def Nodes(region, year, height, top_margin, bottom_margin, pad, ratio):
         nodes = feather.read_feather(
-            DATA_PATH.joinpath("Sankeys/" + region + "/nodes" + region + str(year) + ".feather")
+            DATA_PATH.joinpath("Results/Sankey_data/" + region + "/nodes" + region + str(year) + ".feather")
         )
 
         size = height - top_margin - bottom_margin
@@ -661,32 +701,30 @@ def fig_sankey_cap(year, region):
             y=lambda d: [node_y(nodes, i, white, color, region) for i in d.index],
         )
 
-        nodes["x", "Exports"] = 0.68
-        if "CFC imports re-exported" in nodes.index:
-            try:
-                nodes["x", "CFC imports re-exported"] = 0.68
-            except KeyError:
-                None
-
         try:
-            nodes["x", "RoW - Negative capital formation"] = 0.44
+            nodes.loc["CFC imports re-exported", "x"] = 0.68
         except KeyError:
             None
 
         try:
-            nodes["x", "Negative capital formation"] = 0.44
+            nodes.loc["RoW - Negative capital formation", "x"] = 0.44
         except KeyError:
             None
 
-        nodes["x", "Footprint"] = 1
+        try:
+            nodes.loc["Negative capital formation", "x"] = 0.44
+        except KeyError:
+            None
+
+        nodes.loc["Footprint", "x"] = 1
 
         return nodes, pad2
 
     data_sankey = feather.read_feather(
-        DATA_PATH.joinpath("Sankeys/" + region + "/data" + region + str(year) + ".feather")
+        DATA_PATH.joinpath("Results/Sankey_data/" + region + "/data" + region + str(year) + ".feather")
     ).replace(color_dict)
     node_list = feather.read_feather(
-        DATA_PATH.joinpath("Sankeys/" + region + "/nodelist" + region + str(year) + ".feather")
+        DATA_PATH.joinpath("Results/Sankey_data/" + region + "/nodelist" + region + str(year) + ".feather")
     )[0].values
 
     height = 480
@@ -726,14 +764,15 @@ def fig_sankey_cap(year, region):
         node=node,  #
         valueformat=".0f",
         valuesuffix=" tCO2eq/capita",
+        hoverinfo="none"
         # arrangement="snap",
     )
 
     fig = go.Figure(sankey)
     fig.update_layout(
-        hovermode="y",
+        # hovermode="y",
         title=f"<b>Greenhouse gas footprint of {REGIONS[region]} in {year} (tCO2eq/capita)<b>",
-        font=dict(size=8, color="black"),
+        font=dict(size=10, color="black"),
         paper_bgcolor="white",
         title_x=0.5,
         font_family="Arial",
@@ -741,8 +780,8 @@ def fig_sankey_cap(year, region):
 
     fig.update_traces(
         legendrank=10,
-        node_hoverinfo="all",
-        hoverlabel=dict(align="left", bgcolor="white", bordercolor="black"),
+        # node_hoverinfo="all",
+        # hoverlabel=dict(align="left", bgcolor="white", bordercolor="black"),
     )
 
     fig.update_layout(
@@ -759,3 +798,35 @@ def fig_sankey_cap(year, region):
     # # fig.write_image("SankeyFR" + str(year) + ".svg", engine="orca")
 
     return fig
+
+
+def save_sankey():
+    for region in pd.read_excel("Data/regions.xlsx", index_col=0).sort_values(by="full name").index:
+        for year in range(1995, 2020, 1):
+            if not os.path.exists("Results/Sankey_figs"):
+                os.mkdir("Results/Sankey_figs")
+            if not os.path.exists("Results/Sankey_figs/MtCO2eq"):
+                os.mkdir("Results/Sankey_figs/MtCO2eq")
+            if not os.path.exists("Results/Sankey_figs/MtCO2eq/" + REGIONS[region]):
+                os.mkdir("Results/Sankey_figs/MtCO2eq/" + REGIONS[region])
+            fig = fig_sankey(year, region)
+            fig.write_image(
+                "Results/Sankey_figs/MtCO2eq/" + REGIONS[region] + "/sankey_Mt_" + region + "_" + str(year) + ".svg",
+                engine="orca",
+            )
+
+            if not os.path.exists("Results/Sankey_figs/tCO2eq_per_capita"):
+                os.mkdir("Results/Sankey_figs/tCO2eq_per_capita")
+            if not os.path.exists("Results/Sankey_figs/tCO2eq_per_capita/" + REGIONS[region]):
+                os.mkdir("Results/Sankey_figs/tCO2eq_per_capita/" + REGIONS[region])
+            fig = fig_sankey_cap(year, region)
+            fig.write_image(
+                "Results/Sankey_figs/tCO2eq_per_capita/"
+                + REGIONS[region]
+                + "/sankey_tCO2eq_per_capita_"
+                + region
+                + "_"
+                + str(year)
+                + ".svg",
+                engine="orca",
+            )
