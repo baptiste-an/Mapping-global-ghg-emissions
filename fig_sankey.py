@@ -7,8 +7,6 @@ from flask_caching import Cache
 import os
 
 
-# cache = Cache(app.server, config={"CACHE_TYPE": "FileSystemCache", "CACHE_DIR": "cache"})
-
 DATA_PATH = pathlib.Path(__file__).parent  # .joinpath("Data").resolve()
 
 REGIONS = {}
@@ -178,7 +176,6 @@ def fig_sankey(year, region):
                     "Households",
                     "Government",
                     "NPISHS",
-                    # "Positive capital formation",
                     "GCF",
                     "Negative capital formation",
                     "RoW - Negative capital formation",
@@ -186,7 +183,6 @@ def fig_sankey(year, region):
                     "RoW - Households",
                     "RoW - Government",
                     "RoW - NPISHS",
-                    # "RoW - Positive capital formation",
                 ]
             )
         elif pos == "7. cbaK":
