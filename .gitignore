@@ -1,6 +1,9 @@
 
 Dash-by-Plotly/
-Data/
+Data/EXIO3/
+Data/Kbar/
 old/
-Sankeys/
-MyApp_0/
+MyApp_0/cache/
+MyApp_0/__pycache__/
+cache/
+__pycache__/
