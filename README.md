@@ -10,7 +10,12 @@ $ pip install -r requirements.txt
 
 ## Usage
 
-Running runme.py will:
+Running runme.py requires 50GB of disk space as it will download all exiobase data.
+
+```bash
+$ python runme.py
+```
+It will:
 
 * download EXIOBASE data and save it in Data/EXIO3
 * download Kbar data and save it in Data/Kbar, convert files to .feather

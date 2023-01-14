@@ -1,6 +1,7 @@
 from sankey_functions import *
 from exiobase_functions import *
 from general_functions import *
+from fig_sankey import *
 import zipfile
 import scipy
 
@@ -48,3 +49,6 @@ pop()
 nodes_data()
 norm()
 norm_cap()
+
+# run following functions from fig_sankey:
+save_sankey()
