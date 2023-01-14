@@ -1,10 +1,3 @@
-
-Dash-by-Plotly/
 Data/EXIO3/
 Data/Kbar/
-old/
-MyApp_0/cache/
-MyApp_0/__pycache__/
-cache/
-__pycache__/
-fig_paper/*
+fig_paper/

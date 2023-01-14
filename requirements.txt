@@ -1,0 +1,10 @@
+country_converter==0.7.4
+Flask_Caching==2.0.1
+matplotlib==3.5.1
+numpy==1.21.4
+pandas==1.5.0
+plotly==5.5.0
+pyarrow==8.0.0
+pymrio==0.4.6
+requests==2.26.0
+scipy==1.7.3
