@@ -12,11 +12,11 @@ $ pip install -r requirements.txt
 
 Running runme.py will:
 
-*download EXIOBASE data and save it in Data/EXIO3
-*download Kbar data and save it in Data/Kbar, convert files to .feather
-*run functions from exiobase_functions.py to calculate the footprints
-*run functions from sankey_function.py to generate files that will be used as inputs for building the sankey diagrams
-*run save_sankey() from fig_sankey.py to generation sankey figures and save them in Results/Sankey_figs
+* download EXIOBASE data and save it in Data/EXIO3
+* download Kbar data and save it in Data/Kbar, convert files to .feather
+* run functions from exiobase_functions.py to calculate the footprints
+* run functions from sankey_function.py to generate files that will be used as inputs for building the sankey diagrams
+* run save_sankey() from fig_sankey.py to generation sankey figures and save them in Results/Sankey_figs
 
 ## Application
 
