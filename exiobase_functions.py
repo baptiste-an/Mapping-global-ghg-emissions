@@ -120,7 +120,6 @@ def Y_all():
         NET = pd.DataFrame(index=df.unstack().index)
         CFC = pd.DataFrame(index=df.unstack().index)
         for region in Y.stack().columns:
-
             cfc = Kbar.loc[region].sum(axis=1)  # CFC of region for each one of the 200 sectors
 
             # where does the CFC come from? We use the same shares as GCF data
@@ -346,9 +345,10 @@ def F_hh():
                 }
             )
         )
-        F_hh_imp.loc["SF6"] = F_hh_imp.loc["GHG"] / 1000000 - F_hh_imp.loc[["CO2", "N2O", "CH4"]].sum()
+        F_hh_imp.loc["F-gases"] = F_hh_imp.loc["GHG"] / 1000000 - F_hh_imp.loc[["CO2", "N2O", "CH4"]].sum()  # SF6
         F_hh_imp = F_hh_imp.drop("GHG")
-        F_hh[year] = F_hh_imp.groupby(level="region", axis=1).sum().stack()
+        # F_hh[year] = F_hh_imp.groupby(level="region", axis=1).sum().stack()
+        F_hh[year] = F_hh_imp.stack().stack()
     feather.write_feather(F_hh, "Data/F_hh.feather")
 
 
@@ -375,6 +375,17 @@ def share_houheholds():
     df2 = df.fillna(0.5)  # when no data, 50%
     df2[df2 > 0.9] = 0.9
     feather.write_feather(df2, "Results/share households residential.feather")
+
+    # share_direct=pd.DataFrame()
+    # share_direct_0 = pd.DataFrame()
+    # share_direct_0["Shelter"] = feather.read_feather("Results/share households residential.feather").stack()
+    # share_direct_0["Mobility"] = 1 - share_res.stack()
+    # for i in ["Food", "Other goods and services", "Education", "Health", "Clothing"]:
+    #     share_direct_0[i] = 0
+    # for i in ["Households", "NPISHS", "Government"]:
+    #     share_direct[i] =share_direct_0.stack()
+
+    # feather.write_feather(share_direct,"Results/share_direct.feather")
 
 
 def pop():

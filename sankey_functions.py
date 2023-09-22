@@ -27,6 +27,8 @@ plt_rcParams()
 
 #######
 
+# "Households direct   " => "Direct emissions"
+
 
 def variables(region):
     """Defines some of the variables necessary to build sankey.
@@ -112,7 +114,7 @@ def variables(region):
     color_dict = dict(
         zip(
             [
-                "Households direct   ",  # spaces here to differentiate from other nodes with same name
+                "Direct emissions",  # "Households direct   "
                 "Agriculture-food",
                 "Energy industry",
                 "Heavy industry",
@@ -305,7 +307,6 @@ def level_4(data, DictRoW, left_index):
 
 
 def level_6(data, DictRoW):
-
     """Adds the cba consumption types to data (households, government, etc.).
 
     Add a columns "6. endo" corresponding to the index level "LY name", for capital levels.
@@ -423,7 +424,7 @@ def level_7(region, data, right_index):
                 region + "Households ": "Households ",
                 region + "Positive capital formation ": "Positive capital formation ",
                 region + "NPISHS ": "NPISHS ",
-                dictreg[region] + "Households direct ": "Households direct ",
+                # dictreg[region] + "Households direct ": "Households direct ",
                 "ExportsGovernment ": "Exports",
                 "ExportsHouseholds ": "Exports",
                 "ExportsPositive capital formation ": "Exports",
@@ -537,7 +538,10 @@ def level_9(region, data, right_index):
         ["9. exp"],
     ] = "Footprint"
 
-    data2.loc[[i for i in data2.index if i[4] in right_index and i[5] != region], ["9. exp"],] = data2.loc[
+    data2.loc[
+        [i for i in data2.index if i[4] in right_index and i[5] != region],
+        ["9. exp"],
+    ] = data2.loc[
         [i for i in data2.index if i[4] in right_index and i[5] != region]
     ].index.get_level_values(level="region cons")
     return data2
@@ -562,34 +566,60 @@ def data_households(year, region, data):
     # Add households direct
 
     F_hh = feather.read_feather("Data/F_hh.feather")[year].unstack()[region] / 1000
-    share_transport = 1 - feather.read_feather("Results/share households residential.feather").loc[region].loc[year]
+    # share_transport = 1 - feather.read_feather("Results/share households residential.feather").loc[region].loc[year]
+    share_direct = feather.read_feather("Results/share_direct.feather").loc[region].loc[year]
 
-    for ext in F_hh.index:
-        data.loc["Mobility", "Households direct   ", region, ext, "Households direct", region,] = [
-            F_hh.loc[ext] * share_transport,
-            ext,
-            dictreg[region] + " ",
-            "Territorial",
-            "Households direct   ",
-            "Households direct",
-            np.nan,
-            "Households direct ",
-            "Mobility",
-            "Footprint",
-        ]
+    for ext in F_hh.unstack().index:
+        for sectcons in ["Mobility", "Shelter", "Food", "Other goods and services", "Education", "Health", "Clothing"]:
+            for sectfd in ["Households", "NPISHS", "Government"]:
+                fddict = dict(
+                    {
+                        "Households": "Final consumption expenditure by households",
+                        "NPISHS": "Final consumption expenditure by non-profit organisations serving households (NPISH)",
+                        "Government": "Final consumption expenditure by government",
+                    }
+                )
 
-        data.loc["Shelter", "Households direct   ", region, ext, "Households direct", region,] = [
-            F_hh.loc[ext] * (1 - share_transport),
-            ext,
-            dictreg[region] + " ",
-            "Territorial",
-            "Households direct   ",
-            "Households direct",
-            np.nan,
-            "Households direct ",
-            "Shelter",
-            "Footprint",
-        ]
+                data.loc[
+                    sectcons,  # "Mobility",
+                    "Direct emissions",  # "Households direct   "
+                    region,
+                    ext,
+                    sectfd,  # "Households direct",
+                    region,
+                ] = [
+                    F_hh.loc[ext].loc[fddict[sectfd]]
+                    * share_direct.loc[sectcons].loc[sectfd],  # F_hh.loc[ext] * share_transport,
+                    ext,
+                    dictreg[region] + " ",
+                    "Territorial",
+                    "Direct emissions",  # "Households direct   "
+                    sectfd,  # "Households direct"
+                    np.nan,
+                    sectfd + " ",  # "Households direct ",
+                    sectcons,  # "Mobility",
+                    "Footprint",
+                ]
+
+                # # data.loc[
+                # #     "Shelter",
+                # #     "Households direct   ",
+                # #     region,
+                # #     ext,
+                # #     "Households direct",
+                # #     region,
+                # # ] = [
+                # #     F_hh.loc[ext] * (1 - share_transport),
+                # #     ext,
+                # #     dictreg[region] + " ",
+                # #     "Territorial",
+                # #     "Households direct   ",
+                # #     "Households direct",
+                # #     np.nan,
+                # #     "Households direct ",
+                # #     "Shelter",
+                # #     "Footprint",
+                # # ]
     return data
 
 
@@ -1009,7 +1039,6 @@ def junction_5_to_6(data_sankey, region, data, node_dict, color_dict):
 
     ### if negative values
     if to_abs(CFCtoCFCk).sum() < 0:
-
         RoWCFCtoCFCk = to_abs(RoWCFCtoCFCk + to_abs(CFCtoCFCk))
         RoWCFCtoRoWCFCk = to_abs(RoWCFCtoRoWCFCk - to_abs(CFCtoCFCk))
         CFCtoCFCk = CFCtoCFCk - CFCtoCFCk
@@ -1114,7 +1143,7 @@ def data_from_SLY(SLY, region):
             "Nitrous Oxide (N2O) CO2EQ IPCC categories 1 to 4 and 6 to 7 (excl land use, land use change and forestry)": "N2O",
         }
     )
-    SLY["SF6"] = SLY["GHG"] / 1000000 - SLY[["CO2", "CH4", "N2O"]].sum(axis=1)
+    SLY["F-gases"] = SLY["GHG"] / 1000000 - SLY[["CO2", "CH4", "N2O"]].sum(axis=1)  # used to be SF6
 
     SLY = SLY.drop("GHG", axis=1).stack().unstack(level=0)
     SLY["LY GCF"] = SLY["LY CFC"].fillna(0) + SLY["LY NCF"].fillna(0)
@@ -1149,7 +1178,7 @@ def data_from_SLY(SLY, region):
                         "150100:MACHINERY AND EQUIPMENT": "othercap",
                         "150200:CONSTRUCTION": "othercap",
                         "150300:OTHER PRODUCTS": "othercap",
-                        "Households direct   ": "other",
+                        "Direct emissions": "other",  # "Households direct   "
                         "Mobility": "othersect",
                         "Shelter": "othersect",
                         "Food": "othersect",
@@ -1175,11 +1204,11 @@ def data_from_SLY(SLY, region):
                         "150100:MACHINERY AND EQUIPMENT": "othercap",
                         "150200:CONSTRUCTION": "othercap",
                         "150300:OTHER PRODUCTS": "othercap",
-                        "Households direct   ": "other",
+                        "Direct emissions": "other",  # "Households direct   "
                         "CH4": "othergas",
                         "CO2": "othergas",
                         "N2O": "othergas",
-                        "SF6": "othergas",
+                        "F-gases": "othergas",  # used to be
                     }
                 )
             )
@@ -1282,7 +1311,6 @@ def data_from_SLY(SLY, region):
     )
 
     try:
-
         df2 = pd.DataFrame(
             data.unstack(level="LY name")
             .swaplevel(axis=1)["LY CFC"]
@@ -1489,11 +1517,12 @@ def nodes_data():
                             "RoW - Other goods and services": "RoW - Other",
                             "Other goods and services": "Other",
                             "RoW - Positive capital formation ": "RoW - Pos. CF",
+                            "Territorial": dictreg[region],
                         }
                     )
                 ).index
                 + " ("
-                + [str(int(i)) for i in nodes["value Mt"]]
+                + [str(round(i)) for i in nodes["value Mt"]]
                 + ")"
             )
             nodes["value t/cap"] = nodes["value Mt"] / pop
@@ -1504,6 +1533,7 @@ def nodes_data():
                             "RoW - Other goods and services": "RoW - Other",
                             "Other goods and services": "Other",
                             "RoW - Positive capital formation ": "RoW - Pos. CF",
+                            "Territorial": dictreg[region],
                         }
                     )
                 ).index
@@ -1568,3 +1598,63 @@ def norm_cap():
             data_sankey = feather.read_feather("Sankeys/" + region + "/data" + region + str(year) + ".feather")
             df.loc[region].loc[year] = data_sankey.set_index("position").loc["0. ges"].sum().loc["value"] / pop
     feather.write_feather(df.div(pd.DataFrame(df.T.max())[0], axis=0), "Results/norm_cap.feather")
+
+
+def totals():
+    pba = pd.DataFrame()
+    cba = pd.DataFrame()
+    cbak = pd.DataFrame()
+    for i in range(1995, 2020, 1):
+        pathIOT = "Data/EXIO3/IOT_" + str(i) + "_pxp/"
+
+        Yk = feather.read_feather(pathIOT + "Yk.feather")
+        L = feather.read_feather(pathIOT + "L.feather")
+        L.columns.names = ["region cons", "sector cons"]
+        L.index.names = ["region prod", "sector prod"]
+        Lk = feather.read_feather(pathIOT + "Lk.feather")
+        Lk.columns.names = ["region cons", "sector cons"]
+        Lk.index.names = ["region prod", "sector prod"]
+
+        S_imp = pd.read_csv(
+            "Data/EXIO3/IOT_" + str(i) + "_pxp/impacts/S.txt",
+            delimiter="\t",
+            header=[0, 1],
+            index_col=[0],
+        ).loc["GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"]
+        S_imp.index.names = ["region prod", "sector prod"]
+
+        D_cba = pd.read_csv(
+            "Data/EXIO3/IOT_" + str(i) + "_pxp/impacts/D_cba.txt",
+            delimiter="\t",
+            header=[0, 1],
+            index_col=[0],
+        ).loc["GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"]
+        D_pba = pd.read_csv(
+            "Data/EXIO3/IOT_" + str(i) + "_pxp/impacts/D_pba.txt",
+            delimiter="\t",
+            header=[0, 1],
+            index_col=[0],
+        ).loc["GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"]
+        F_Y = pd.read_csv(
+            "Data/EXIO3/IOT_" + str(i) + "_pxp/impacts/F_Y.txt",
+            delimiter="\t",
+            header=[0, 1],
+            index_col=[0],
+        ).loc["GHG emissions (GWP100) | Problem oriented approach: baseline (CML, 2001) | GWP100 (IPCC, 2007)"]
+
+        SLkY = pd.DataFrame()
+        Y_k = Yk.drop(["NCF", "CFC"], axis=1).sum(axis=1).unstack()
+        Y_k.index.names = ["region cons", "sector cons"]
+        for reg in Y_k.columns:
+            SLkY[reg] = Lk.mul(Y_k[reg], axis=1).mul(S_imp, axis=0).sum()
+
+        cba[i] = D_cba.groupby(level=0).sum() + F_Y.groupby(level=0).sum()
+        pba[i] = D_cba.groupby(level=0).sum() + F_Y.groupby(level=0).sum()
+        cbak[i] = SLkY.sum() + F_Y.groupby(level=0).sum()
+    totals = pd.DataFrame()
+    totals["pba"] = pba.stack()
+    totals["cba"] = cba.stack()
+    totals["cbak"] = cbak.stack()
+    feather.write_feather(totals, "Results/totals.feather")
+    pd.write_excel(totals, "Results/totals.xlsx")
+    totals.to_excel("Results/totals.xlsx")
