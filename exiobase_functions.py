@@ -24,18 +24,24 @@ def Kbar():
     """
 
     # read data from WorldBank
-    CFC_WB = pd.read_excel("Data/World Bank/CFC worldbank.xlsx", header=3, index_col=[0])[
+    CFC_WB = pd.read_excel(
+        "Data/World Bank/CFC worldbank.xlsx", header=3, index_col=[0]
+    )[
         [str(i) for i in range(2015, 2020, 1)]
     ]  # consumption of fixed capital
 
-    GFCF_WB = pd.read_excel("Data/World Bank/GFCF worldbank.xlsx", header=3, index_col=[0])[
+    GFCF_WB = pd.read_excel(
+        "Data/World Bank/GFCF worldbank.xlsx", header=3, index_col=[0]
+    )[
         [str(i) for i in range(2015, 2020, 1)]
     ]  # gross fixed capital formation
 
     # here we want to aggregate WorldBank data to Exiobase regions
 
     # first, set to NaN values the regions that don't have both CFC and GFCF data
-    CFC_WB = CFC_WB * GFCF_WB / GFCF_WB  # in case some countries have data for CFC but not GFCF
+    CFC_WB = (
+        CFC_WB * GFCF_WB / GFCF_WB
+    )  # in case some countries have data for CFC but not GFCF
     GFCF_WB = GFCF_WB * CFC_WB / CFC_WB
 
     # rename the regions to a common format
@@ -43,12 +49,24 @@ def Kbar():
     # convert the common format to EXIOBASE format
     CFC_WB["region"] = cc.convert(names=CFC_WB.index, to="EXIO3")
     # define EXIOBASE regions as index
-    CFC_WB = CFC_WB.reset_index().set_index("region").drop("Country Name", axis=1).groupby(level="region").sum()
+    CFC_WB = (
+        CFC_WB.reset_index()
+        .set_index("region")
+        .drop("Country Name", axis=1)
+        .groupby(level="region")
+        .sum()
+    )
 
     # same as above for GFCF data
     GFCF_WB = rename_region(GFCF_WB, "Country Name").drop("Z - Aggregated categories")
     GFCF_WB["region"] = cc.convert(names=GFCF_WB.index, to="EXIO3")
-    GFCF_WB = GFCF_WB.reset_index().set_index("region").drop("Country Name", axis=1).groupby(level="region").sum()
+    GFCF_WB = (
+        GFCF_WB.reset_index()
+        .set_index("region")
+        .drop("Country Name", axis=1)
+        .groupby(level="region")
+        .sum()
+    )
 
     GFCF_over_CFC_WB = GFCF_WB / CFC_WB
     GFCF_over_CFC_WB.loc["TW"] = GFCF_over_CFC_WB.loc["CN"]
@@ -70,7 +88,9 @@ def Kbar():
             pd.DataFrame(np.identity(9800), index=Z.index, columns=Z.columns)
         )
 
-        GFCF_exio = feather.read_feather("Data/EXIO3/IOT_" + str(i) + "_pxp/Y.feather").swaplevel(axis=1)[
+        GFCF_exio = feather.read_feather(
+            "Data/EXIO3/IOT_" + str(i) + "_pxp/Y.feather"
+        ).swaplevel(axis=1)[
             "Gross fixed capital formation"
         ]  # aggregated 49 regions, 1 product
 
@@ -84,7 +104,10 @@ def Kbar():
         GFCF_over_CFC_exio = GFCF_exio.sum() / CFC_exio.unstack().sum(axis=1)
 
         CFC_exio_rescaled = (
-            CFC_exio.unstack().mul(GFCF_over_CFC_exio, axis=0).div(GFCF_over_CFC_WB[str(i)], axis=0).stack()
+            CFC_exio.unstack()
+            .mul(GFCF_over_CFC_exio, axis=0)
+            .div(GFCF_over_CFC_WB[str(i)], axis=0)
+            .stack()
         )
 
         feather.write_feather(
@@ -111,8 +134,12 @@ def Y_all():
         Y = feather.read_feather(pathIOT + "Y.feather")
 
         df = pd.DataFrame([], index=Y.stack(level=0).index)
-        df["Households"] = Y.stack(level=0)["Final consumption expenditure by households"]
-        df["Government"] = Y.stack(level=0)["Final consumption expenditure by government"]
+        df["Households"] = Y.stack(level=0)[
+            "Final consumption expenditure by households"
+        ]
+        df["Government"] = Y.stack(level=0)[
+            "Final consumption expenditure by government"
+        ]
         df["NPISHS"] = Y.stack(level=0)[
             "Final consumption expenditure by non-profit organisations serving households (NPISH)"
         ]
@@ -120,7 +147,9 @@ def Y_all():
         NET = pd.DataFrame(index=df.unstack().index)
         CFC = pd.DataFrame(index=df.unstack().index)
         for region in Y.stack().columns:
-            cfc = Kbar.loc[region].sum(axis=1)  # CFC of region for each one of the 200 sectors
+            cfc = Kbar.loc[region].sum(
+                axis=1
+            )  # CFC of region for each one of the 200 sectors
 
             # where does the CFC come from? We use the same shares as GCF data
 
@@ -139,7 +168,9 @@ def Y_all():
                 .unstack()
             )  # lines=regions, columns=sectors of GCF
 
-            gcf_shares = gcf_all.div(gcf_all.sum(), axis=1)  # share of origin region for each sector
+            gcf_shares = gcf_all.div(
+                gcf_all.sum(), axis=1
+            )  # share of origin region for each sector
             gcf_shares.loc[region, gcf_shares.isnull().all()] = 1
             gcf = gcf_all.sum()
             diff = gcf - cfc
@@ -170,7 +201,11 @@ def L_and_Lk():
     """
     for i in range(1995, 2020, 1):
         pathIOT = "Data/EXIO3/IOT_" + str(i) + "_pxp/"
-        Y = feather.read_feather(pathIOT + "Y.feather").groupby(level="region", axis=1).sum()
+        Y = (
+            feather.read_feather(pathIOT + "Y.feather")
+            .groupby(level="region", axis=1)
+            .sum()
+        )
         Z = feather.read_feather(pathIOT + "Z.feather").fillna(0)
         Kbar = feather.read_feather("Data/Kbar/Kbar_" + str(i) + ".feather").fillna(0)
 
@@ -209,8 +244,12 @@ def SLY():
     if not os.path.exists("SLY"):
         os.mkdir("SLY")
 
-    conc_sec_cons = pd.read_excel("Data/concordance.xlsx", sheet_name="sector cons", index_col=[0, 1])
-    conc_sec_prod = pd.read_excel("Data/concordance.xlsx", sheet_name="sector prod", index_col=[0, 1])
+    conc_sec_cons = pd.read_excel(
+        "Data/concordance.xlsx", sheet_name="sector cons", index_col=[0, 1]
+    )
+    conc_sec_prod = pd.read_excel(
+        "Data/concordance.xlsx", sheet_name="sector prod", index_col=[0, 1]
+    )
     conc_reg_prod = pd.read_excel(
         "Data/concordance.xlsx",
         sheet_name="region prod",
@@ -221,7 +260,9 @@ def SLY():
         sheet_name="region cons",
         index_col=[0, 1],
     )
-    conc_cap = pd.read_excel("Data/concordance.xlsx", sheet_name="capital", index_col=[0, 1])
+    conc_cap = pd.read_excel(
+        "Data/concordance.xlsx", sheet_name="capital", index_col=[0, 1]
+    )
 
     for i in range(1995, 2020, 1):
         pathIOT = "Data/EXIO3/IOT_" + str(i) + "_pxp/"
@@ -263,7 +304,9 @@ def SLY():
             LY_all = pd.concat(
                 [
                     LY_all,
-                    pd.concat([LY, LkY], axis=1, keys=["LY " + col, "LkY " + col]).unstack(),
+                    pd.concat(
+                        [LY, LkY], axis=1, keys=["LY " + col, "LkY " + col]
+                    ).unstack(),
                 ],
                 axis=1,
             )
@@ -283,7 +326,9 @@ def SLY():
         S_imp.columns.names = ["region prod", "sector prod"]
 
         for j in impacts:
-            SLY[j] = agg(LY_all.mul(S_imp.loc[j], axis=0), conc_sec_prod).unstack().unstack()
+            SLY[j] = (
+                agg(LY_all.mul(S_imp.loc[j], axis=0), conc_sec_prod).unstack().unstack()
+            )
 
         SLY.columns.names = ["Extensions"]
         SLY = SLY.stack().unstack(level="sector cons")
@@ -293,7 +338,9 @@ def SLY():
         SLY = (
             SLY.stack()
             .unstack(level="Extensions")
-            .reorder_levels(["LY name", "region cons", "sector cons", "sector prod", "region prod"])
+            .reorder_levels(
+                ["LY name", "region cons", "sector cons", "sector prod", "region prod"]
+            )
         )
 
         for region in Yk.unstack().stack(level=0).columns:
@@ -345,14 +392,16 @@ def F_hh():
                 }
             )
         )
-        F_hh_imp.loc["F-gases"] = F_hh_imp.loc["GHG"] / 1000000 - F_hh_imp.loc[["CO2", "N2O", "CH4"]].sum()  # SF6
+        F_hh_imp.loc["F-gases"] = (
+            F_hh_imp.loc["GHG"] / 1000000 - F_hh_imp.loc[["CO2", "N2O", "CH4"]].sum()
+        )  # SF6
         F_hh_imp = F_hh_imp.drop("GHG")
         # F_hh[year] = F_hh_imp.groupby(level="region", axis=1).sum().stack()
         F_hh[year] = F_hh_imp.stack().stack()
     feather.write_feather(F_hh, "Data/F_hh.feather")
 
 
-def share_houheholds():
+def share_houheholds_old():
     """Disaggregates direct emissions by households into residental and non residential.
 
     Based on UNFCCC data. Results saved to "share households residential.feather"
@@ -388,6 +437,55 @@ def share_houheholds():
     # feather.write_feather(share_direct,"Results/share_direct.feather")
 
 
+def share_houheholds():
+    """preprocesses direct emissions by households into the best format"
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+    """
+    df = pd.read_parquet("hhld_emissions.parquet")
+    df = df.drop("unit", axis=1)
+    df = df.reset_index().set_index(
+        ["year", "stressor", "category", "region", "sector"]
+    )
+    conc_sec_cons = pd.read_excel(
+        "Data/concordance.xlsx", sheet_name="sector cons", index_col=[0, 1]
+    )
+    df = agg(df, conc_sec_cons, axis=0)
+    df = (
+        df["value"]
+        .unstack(level=0)
+        .loc[
+            [
+                "CH4 - combustion - air",
+                "CO2 - combustion - air",
+                "N2O - combustion - air",
+            ]
+        ]
+    )
+    df.columns = [int(i) for i in df.columns]
+    short = dict(
+        {
+            "CH4 - combustion - air": "CH4",
+            "CO2 - combustion - air": "CO2",
+            "N2O - combustion - air": "N2O",
+            "Final consumption expenditure by government": "Government",
+            "Final consumption expenditure by households": "Households",
+            "Final consumption expenditure by non-profit organisations serving households (NPISH)": "NPISHS",
+        }
+    )
+    df = df.rename(index=short)
+    df = df.stack().unstack(level="sector")
+    df_share = df.div(df.sum(axis=1), axis=0)
+    df_share = df_share.unstack(level=[2, 3]).stack(dropna=False).stack(dropna=False)
+    feather.write_feather(df_share, "Results/share_direct_final.feather")
+
+
 def pop():
     """Converts population data form WorldBank format to EXIOBASE format, save it in pop.feather.
 
@@ -402,7 +500,9 @@ def pop():
     """
     pop = (
         rename_region(
-            pd.read_csv("Data/World Bank/pop.csv", header=[2], index_col=[0])[[str(i) for i in range(1995, 2020, 1)]],
+            pd.read_csv("Data/World Bank/pop.csv", header=[2], index_col=[0])[
+                [str(i) for i in range(1995, 2020, 1)]
+            ],
             level="Country Name",
         )
         .drop("Z - Aggregated categories")
