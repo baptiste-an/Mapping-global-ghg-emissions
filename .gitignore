@@ -3,3 +3,4 @@ Data/Kbar/
 fig_paper/
 __pycache__/
 test_extensions.py
+env/

@@ -21,8 +21,8 @@ pio.orca.config.executable = (
     "C:/Users/andrieba/anaconda3/pkgs/plotly-orca-1.2.1-1/orca_app/orca.exe"
 )
 pio.orca.config.save()
-pio.kaleido.scope.mathjax = None
-pyo.init_notebook_mode()
+# pio.kaleido.scope.mathjax = None
+# pyo.init_notebook_mode()
 pio.renderers.default = "vscode"
 
 plt_rcParams()
